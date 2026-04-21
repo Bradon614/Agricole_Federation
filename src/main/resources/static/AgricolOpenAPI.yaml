@@ -1,113 +1,113 @@
 openapi: 3.1.0
 info:
-  title: API Fédération Nationale des Collectivités Agricoles
+  title: National Federation of Agricultural Collectives API
   description: |
-    API REST pour la gestion de la Fédération de Collectivités Agricoles à Madagascar.
-    Version mise à jour le 21 avril 2026 :
-    - Nouvelles règles d’admission des membres (B-2)
-    - Ajout des statistiques globales de la fédération (H)
+    REST API for the management of the National Federation of Agricultural Collectives in Madagascar.
+    Updated on April 21, 2026:
+    - New reinforced membership admission rules (B-2)
+    - Addition of federation-wide global statistics (H)
   version: 1.1.0
 
 servers:
   - url: https://api.federation-agricole.mg/v1
-    description: Serveur de production
+    description: Production server
   - url: https://api-dev.federation-agricole.mg/v1
-    description: Serveur de développement
+    description: Development server
 
 tags:
-  - name: A - Collectivités
-    description: Ouverture et gestion des collectivités agricoles
-  - name: B - Membres
-    description: Admission, changement et démission de membres (règles renforcées le 21/04/2026)
-  - name: C - Cotisations
-    description: Gestion des cotisations et paiements
-  - name: D - Trésorerie
-    description: Comptes et situation financière
-  - name: E - Activités
-    description: Gestion des activités
-  - name: F - Assiduité
-    description: Gestion des présences et excuses
-  - name: G - Statistiques Collectivité
-    description: Rapports mensuels par collectivité
-  - name: H - Statistiques Fédération
-    description: Rapports globaux mensuels et annuels de la fédération
+  - name: A - Collectives
+    description: Opening and management of agricultural collectives
+  - name: B - Members
+    description: Member admission, transfer and resignation (rules updated on 21/04/2026)
+  - name: C - Contributions
+    description: Contributions and payments management
+  - name: D - Treasury
+    description: Accounts and financial situation
+  - name: E - Activities
+    description: Activities management
+  - name: F - Attendance
+    description: Attendance and excuses management
+  - name: G - Collective Statistics
+    description: Monthly reports per collective
+  - name: H - Federation Statistics
+    description: Global monthly and annual reports of the federation
 
 paths:
 
   # =============================================
-  # A - COLLECTIVITÉS
+  # A - COLLECTIVES
   # =============================================
-  /collectivites:
+  /collectives:
     post:
-      tags: [A - Collectivités]
-      summary: Créer une nouvelle collectivité (demande d’ouverture)
-      operationId: createCollectivite
+      tags: [A - Collectives]
+      summary: Create a new collective (opening request)
+      operationId: createCollective
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CollectiviteCreationRequest'
+              $ref: '#/components/schemas/CollectiveCreationRequest'
       responses:
         '201':
-          description: Collectivité créée avec succès
+          description: Collective created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Collectivite'
+                $ref: '#/components/schemas/Collective'
 
-  /collectivites/{id_collectivite}/autoriser:
+  /collectives/{id_collective}/authorize:
     patch:
-      tags: [A - Collectivités]
-      summary: Autoriser l’ouverture d’une collectivité
-      operationId: autoriserCollectivite
+      tags: [A - Collectives]
+      summary: Authorize the opening of a collective
+      operationId: authorizeCollective
       parameters:
-        - name: id_collectivite
+        - name: id_collective
           in: path
           required: true
           schema:
             type: integer
       responses:
         '200':
-          description: Collectivité autorisée
+          description: Collective authorized successfully
 
   # =============================================
-  # B - MEMBRES (mise à jour 21/04/2026)
+  # B - MEMBERS (updated 21/04/2026)
   # =============================================
-  /membres:
+  /members:
     post:
-      tags: [B - Membres]
-      summary: Admettre un nouveau membre (procédure renforcée)
+      tags: [B - Members]
+      summary: Admit a new member (reinforced procedure)
       description: |
-        **Nouvelles règles d’admission (21/04/2026)** :
-        - Minimum 2 parrains confirmés
-        - Nombre de parrains de la collectivité cible ≥ nombre de parrains des autres collectivités
-        - Indiquer la nature de la relation avec chaque parrain
-        - Payer 50 000 MGA + l’intégralité des cotisations annuelles obligatoires de la collectivité
-      operationId: createMembre
+        **New admission rules (April 21, 2026)**:
+        - Must be sponsored by **at least 2 confirmed members**
+        - Number of sponsors from the target collective must be **greater than or equal** to the number of sponsors from other collectives
+        - Must specify the nature of the relationship with each sponsor
+        - Must pay 50,000 MGA admission fee + full annual mandatory contributions of the target collective
+      operationId: createMember
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MembreCreationRequest'
+              $ref: '#/components/schemas/MemberCreationRequest'
       responses:
         '201':
-          description: Membre admis avec succès
+          description: Member admitted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Membre'
+                $ref: '#/components/schemas/Member'
         '400':
-          description: Conditions de parrainage ou paiement non respectées
+          description: Sponsorship conditions or payment not respected
 
-  /membres/{id_membre}/changer-collectivite:
+  /members/{id_member}/change-collective:
     patch:
-      tags: [B - Membres]
-      summary: Changer un membre de collectivité
-      operationId: changerCollectiviteMembre
+      tags: [B - Members]
+      summary: Change a member's collective
+      operationId: changeMemberCollective
       parameters:
-        - name: id_membre
+        - name: id_member
           in: path
           required: true
           schema:
@@ -119,135 +119,135 @@ paths:
             schema:
               type: object
               properties:
-                id_nouvelle_collectivite:
+                new_collective_id:
                   type: integer
       responses:
         '200':
-          description: Collectivité changée avec succès
+          description: Collective changed successfully
 
-  /membres/{id_membre}/demissionner:
+  /members/{id_member}/resign:
     patch:
-      tags: [B - Membres]
-      summary: Démissionner un membre
-      operationId: demissionnerMembre
+      tags: [B - Members]
+      summary: Resign a member
+      operationId: resignMember
       parameters:
-        - name: id_membre
+        - name: id_member
           in: path
           required: true
           schema:
             type: integer
       responses:
         '200':
-          description: Membre démissionné avec succès
+          description: Member resigned successfully
 
   # =============================================
-  # C - COTISATIONS
+  # C - CONTRIBUTIONS
   # =============================================
-  /cotisations:
+  /contributions:
     post:
-      tags: [C - Cotisations]
-      summary: Enregistrer un paiement de cotisation
-      operationId: createCotisation
+      tags: [C - Contributions]
+      summary: Record a contribution payment
+      operationId: createContribution
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CotisationRequest'
+              $ref: '#/components/schemas/ContributionRequest'
       responses:
         '201':
-          description: Cotisation enregistrée
+          description: Contribution recorded successfully
 
   # =============================================
-  # D - TRÉSORERIE
+  # D - TREASURY
   # =============================================
-  /comptes:
+  /accounts:
     post:
-      tags: [D - Trésorerie]
-      summary: Créer un compte (Caisse, Bancaire ou Mobile Money)
-      operationId: createCompte
+      tags: [D - Treasury]
+      summary: Create an account (Cash, Bank or Mobile Money)
+      operationId: createAccount
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CompteCreationRequest'
+              $ref: '#/components/schemas/AccountCreationRequest'
       responses:
         '201':
-          description: Compte créé
+          description: Account created successfully
 
-  /collectivites/{id_collectivite}/comptes:
+  /collectives/{id_collective}/accounts:
     get:
-      tags: [D - Trésorerie]
-      summary: Lister les comptes d’une collectivité
-      operationId: getComptesCollectivite
+      tags: [D - Treasury]
+      summary: List accounts of a collective
+      operationId: getCollectiveAccounts
       parameters:
-        - name: id_collectivite
+        - name: id_collective
           in: path
           required: true
           schema:
             type: integer
       responses:
         '200':
-          description: Liste des comptes
+          description: List of accounts
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/CompteDetaille'
+                  $ref: '#/components/schemas/AccountDetail'
 
   # =============================================
-  # E - ACTIVITÉS
+  # E - ACTIVITIES
   # =============================================
-  /activites:
+  /activities:
     post:
-      tags: [E - Activités]
-      summary: Créer une activité
-      operationId: createActivite
+      tags: [E - Activities]
+      summary: Create an activity
+      operationId: createActivity
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ActiviteCreationRequest'
+              $ref: '#/components/schemas/ActivityCreationRequest'
       responses:
         '201':
-          description: Activité créée
+          description: Activity created successfully
 
   # =============================================
-  # F - ASSIDUITÉ
+  # F - ATTENDANCE
   # =============================================
-  /presences:
+  /attendances:
     post:
-      tags: [F - Assiduité]
-      summary: Enregistrer les présences à une activité
-      operationId: enregistrerPresences
+      tags: [F - Attendance]
+      summary: Record attendances for an activity
+      operationId: recordAttendances
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PresenceBulkRequest'
+              $ref: '#/components/schemas/AttendanceBulkRequest'
       responses:
         '201':
-          description: Présences enregistrées
+          description: Attendances recorded successfully
 
   # =============================================
-  # G - STATISTIQUES COLLECTIVITÉ
+  # G - COLLECTIVE STATISTICS
   # =============================================
-  /collectivites/{id_collectivite}/statistiques/mensuelles:
+  /collectives/{id_collective}/statistics/monthly:
     get:
-      tags: [G - Statistiques Collectivité]
-      summary: Rapport mensuel d’une collectivité
-      operationId: getRapportMensuelCollectivite
+      tags: [G - Collective Statistics]
+      summary: Monthly report of a collective
+      operationId: getMonthlyCollectiveReport
       parameters:
-        - name: id_collectivite
+        - name: id_collective
           in: path
           required: true
           schema:
             type: integer
-        - name: mois
+        - name: month
           in: query
           required: true
           schema:
@@ -255,35 +255,35 @@ paths:
             format: yyyy-MM
       responses:
         '200':
-          description: Statistiques mensuelles
+          description: Monthly statistics
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RapportMensuelCollectivite'
+                $ref: '#/components/schemas/MonthlyCollectiveReport'
 
   # =============================================
-  # H - STATISTIQUES FÉDÉRATION (NOUVEAU)
+  # H - FEDERATION STATISTICS (NEW)
   # =============================================
-  /federation/statistiques:
+  /federation/statistics:
     get:
-      tags: [H - Statistiques Fédération]
-      summary: Rapport global mensuel ou annuel de la fédération
-      description: Taux d’assiduité, % de membres à jour de cotisation, nouveaux adhérents par collectivité
-      operationId: getRapportFederation
+      tags: [H - Federation Statistics]
+      summary: Global monthly or annual federation report
+      description: attendance rate, % of members up to date on contributions, number of new members
+      operationId: getFederationReport
       parameters:
-        - name: type_periode
+        - name: period_type
           in: query
           required: true
           schema:
             type: string
-            enum: [mensuel, annuel]
-        - name: date_debut
+            enum: [monthly, yearly]
+        - name: start_date
           in: query
           required: true
           schema:
             type: string
             format: date
-        - name: date_fin
+        - name: end_date
           in: query
           required: true
           schema:
@@ -291,212 +291,205 @@ paths:
             format: date
       responses:
         '200':
-          description: Rapport global de la fédération
+          description: Global federation report
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RapportFederation'
+                $ref: '#/components/schemas/FederationReport'
 
 components:
   schemas:
 
-    # A - Collectivités
-    CollectiviteCreationRequest:
+    # A - Collectives
+    CollectiveCreationRequest:
       type: object
-      required: [numero_unique, nom_unique, ville, specialite_agricole, date_creation]
+      required: [unique_number, unique_name, city, agricultural_specialty, creation_date]
       properties:
-        numero_unique: { type: string, example: "COLL-2026-001" }
-        nom_unique: { type: string }
-        ville: { type: string }
-        specialite_agricole: { type: string }
-        date_creation: { type: string, format: date }
+        unique_number: { type: string, example: "COLL-2026-001" }
+        unique_name: { type: string }
+        city: { type: string }
+        agricultural_specialty: { type: string }
+        creation_date: { type: string, format: date }
 
-    Collectivite:
+    Collective:
       type: object
       properties:
-        id_collectivite: { type: integer }
-        numero_unique: { type: string }
-        nom_unique: { type: string }
-        ville: { type: string }
-        specialite_agricole: { type: string }
-        date_creation: { type: string, format: date }
-        date_autorisation_ouverture: { type: string, format: date, nullable: true }
+        id_collective: { type: integer }
+        unique_number: { type: string }
+        unique_name: { type: string }
+        city: { type: string }
+        agricultural_specialty: { type: string }
+        creation_date: { type: string, format: date }
+        authorization_date: { type: string, format: date, nullable: true }
 
-    # B - Membres (version mise à jour)
-    MembreCreationRequest:
+    # B - Members (updated)
+    MemberCreationRequest:
       type: object
       required:
-        - nom
-        - prenoms
-        - date_naissance
-        - genre
-        - adresse
-        - metier
-        - telephone
+        - first_name
+        - last_name
+        - birth_date
+        - gender
+        - address
+        - occupation
+        - phone
         - email
-        - id_collectivite
-        - parrains
+        - collective_id
+        - sponsors
       properties:
-        nom: { type: string }
-        prenoms: { type: string }
-        date_naissance: { type: string, format: date }
-        genre:
+        first_name: { type: string }
+        last_name: { type: string }
+        birth_date: { type: string, format: date }
+        gender:
           type: string
           enum: [M, F]
-        adresse: { type: string }
-        metier: { type: string }
-        telephone: { type: string }
+        address: { type: string }
+        occupation: { type: string }
+        phone: { type: string }
         email: { type: string, format: email }
-        date_adhesion: { type: string, format: date }
-        id_collectivite: { type: integer }
-        parrains:
+        adhesion_date: { type: string, format: date }
+        collective_id: { type: integer }
+        sponsors:
           type: array
           minItems: 2
           items:
-            $ref: '#/components/schemas/ParrainInfo'
-        cotisation_annuelle:
+            $ref: '#/components/schemas/SponsorInfo'
+        annual_contribution:
           type: object
-          required: [montant, id_compte]
+          required: [amount, account_id]
           properties:
-            montant: { type: number, format: decimal, minimum: 0 }
-            id_compte: { type: integer }
+            amount: { type: number, format: decimal, minimum: 0 }
+            account_id: { type: integer }
 
-    ParrainInfo:
+    SponsorInfo:
       type: object
-      required: [id_parrain, relation]
+      required: [sponsor_id, relationship]
       properties:
-        id_parrain: { type: integer }
-        relation:
+        sponsor_id: { type: integer }
+        relationship:
           type: string
-          example: "famille"
-          description: "famille, ami, collègue, voisin, etc."
+          example: "family"
+          description: "family, friend, colleague, neighbor, etc."
 
-    Membre:
+    Member:
       type: object
       properties:
-        id_membre: { type: integer }
-        nom: { type: string }
-        prenoms: { type: string }
-        statut:
+        id_member: { type: integer }
+        first_name: { type: string }
+        last_name: { type: string }
+        status:
           type: string
-          enum: [actif, demissionne]
+          enum: [active, resigned]
 
-    # C - Cotisations
-    CotisationRequest:
+    # C - Contributions
+    ContributionRequest:
       type: object
-      required: [id_membre, id_collectivite, type_cotisation, montant, date_versement, mode_paiement, id_compte]
+      required: [member_id, collective_id, type, amount, payment_date, payment_method, account_id]
       properties:
-        id_membre: { type: integer }
-        id_collectivite: { type: integer }
-        type_cotisation:
+        member_id: { type: integer }
+        collective_id: { type: integer }
+        type:
           type: string
-          enum: [Periodique, Ponctuelle]
-        montant: { type: number, format: decimal }
-        date_versement: { type: string, format: date }
-        mode_paiement:
+          enum: [Periodic, OneTime]
+        amount: { type: number, format: decimal }
+        payment_date: { type: string, format: date }
+        payment_method:
           type: string
-          enum: [Espèce, Virement Bancaire, Mobile Money]
-        periode: { type: string }
-        id_compte: { type: integer }
+          enum: [Cash, BankTransfer, MobileMoney]
+        period: { type: string }
+        account_id: { type: integer }
 
-    Cotisation:
+    # D - Accounts
+    AccountCreationRequest:
       type: object
+      required: [account_type, holder_name, collective_id]
       properties:
-        id_cotisation: { type: integer }
-        montant: { type: number }
-        date_versement: { type: string, format: date }
-
-    # D - Comptes
-    CompteCreationRequest:
-      type: object
-      required: [type_compte, nom_titulaire, id_collectivite]
-      properties:
-        type_compte:
+        account_type:
           type: string
-          enum: [Caisse, Bancaire, MobileMoney]
-        nom_titulaire: { type: string }
-        id_collectivite: { type: integer }
+          enum: [Cash, Bank, MobileMoney]
+        holder_name: { type: string }
+        collective_id: { type: integer }
 
-    CompteDetaille:
+    AccountDetail:
       type: object
       properties:
-        id_compte: { type: integer }
-        type_compte: { type: string }
-        nom_titulaire: { type: string }
-        solde: { type: number, format: decimal }
-        numero_compte: { type: string }
-        numero_telephone: { type: string }
+        id_account: { type: integer }
+        account_type: { type: string }
+        holder_name: { type: string }
+        balance: { type: number, format: decimal }
+        account_number: { type: string }
+        phone_number: { type: string }
 
-    # E - Activités
-    ActiviteCreationRequest:
+    # E - Activities
+    ActivityCreationRequest:
       type: object
-      required: [type_activite, date_activite]
+      required: [activity_type, activity_date]
       properties:
-        id_collectivite: { type: integer, nullable: true }
-        type_activite:
+        collective_id: { type: integer, nullable: true }
+        activity_type:
           type: string
-          enum: [Assemblee_Generale_Mensuelle, Formation_Obligatoire_Juniors, Activite_Exceptionnelle, Assemblee_Generale_Annuelle_Federation, Autre]
-        date_activite: { type: string, format: date }
-        obligatoire: { type: boolean, default: true }
-        cible: { type: string, default: "Tous" }
+          enum: [MonthlyGeneralMeeting, MandatoryTrainingJuniors, ExceptionalActivity, AnnualFederationMeeting, Other]
+        activity_date: { type: string, format: date }
+        is_mandatory: { type: boolean, default: true }
+        target: { type: string, default: "All" }
 
-    # F - Présences
-    PresenceBulkRequest:
+    # F - Attendance
+    AttendanceBulkRequest:
       type: object
-      required: [id_activite, presences]
+      required: [activity_id, attendances]
       properties:
-        id_activite: { type: integer }
-        presences:
+        activity_id: { type: integer }
+        attendances:
           type: array
           items:
             type: object
-            required: [id_membre, est_present]
+            required: [member_id, is_present]
             properties:
-              id_membre: { type: integer }
-              est_present: { type: boolean }
-              est_excuse: { type: boolean }
-              motif_excuse: { type: string }
+              member_id: { type: integer }
+              is_present: { type: boolean }
+              is_excused: { type: boolean }
+              excuse_reason: { type: string }
 
-    # G - Statistiques Collectivité
-    RapportMensuelCollectivite:
+    # G - Collective Statistics
+    MonthlyCollectiveReport:
       type: object
       properties:
-        id_collectivite: { type: integer }
-        mois: { type: string }
-        effectif_total: { type: integer }
-        taux_assiduite_globale: { type: number, format: float }
-        nombre_membres_actifs: { type: integer }
+        collective_id: { type: integer }
+        month: { type: string }
+        total_members: { type: integer }
+        overall_attendance_rate: { type: number, format: float }
+        active_members: { type: integer }
 
-    # H - Statistiques Fédération
-    RapportFederation:
+    # H - Federation Statistics
+    FederationReport:
       type: object
       properties:
-        type_periode:
+        period_type:
           type: string
-          enum: [mensuel, annuel]
-        date_debut: { type: string, format: date }
-        date_fin: { type: string, format: date }
-        collectivites:
+          enum: [monthly, yearly]
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+        collectives:
           type: array
           items:
-            $ref: '#/components/schemas/StatistiqueCollectiviteFederation'
-        totaux_generaux:
+            $ref: '#/components/schemas/CollectiveFederationStatistic'
+        overall_totals:
           type: object
           properties:
-            nombre_total_collectivites: { type: integer }
-            nombre_total_membres: { type: integer }
-            taux_assiduite_federal: { type: number, format: float }
+            total_collectives: { type: integer }
+            total_members: { type: integer }
+            federal_attendance_rate: { type: number, format: float }
 
-    StatistiqueCollectiviteFederation:
+    CollectiveFederationStatistic:
       type: object
       properties:
-        id_collectivite: { type: integer }
-        nom_unique: { type: string }
-        ville: { type: string }
-        taux_assiduite_globale: { type: number, format: float }
-        pourcentage_membres_a_jour_cotisation: { type: number, format: float }
-        nombre_nouveaux_adherents: { type: integer }
-        effectif_total: { type: integer }
+        collective_id: { type: integer }
+        collective_name: { type: string }
+        city: { type: string }
+        overall_attendance_rate: { type: number, format: float }
+        percentage_members_up_to_date: { type: number, format: float }
+        new_members: { type: integer }
+        total_members: { type: integer }
 
   securitySchemes:
     BearerAuth:

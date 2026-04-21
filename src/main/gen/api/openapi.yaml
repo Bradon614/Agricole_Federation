@@ -1,0 +1,765 @@
+openapi: 3.1.0
+info:
+  description: |
+    API REST pour la gestion de la Fédération de Collectivités Agricoles à Madagascar.
+    Version mise à jour le 21 avril 2026 :
+    - Nouvelles règles d’admission des membres (B-2)
+    - Ajout des statistiques globales de la fédération (H)
+  title: API Fédération Nationale des Collectivités Agricoles
+  version: 1.1.0
+servers:
+- description: Serveur de production
+  url: https://api.federation-agricole.mg/v1
+- description: Serveur de développement
+  url: https://api-dev.federation-agricole.mg/v1
+security:
+- BearerAuth: []
+tags:
+- description: Ouverture et gestion des collectivités agricoles
+  name: A - Collectivités
+- description: "Admission, changement et démission de membres (règles renforcées le\
+    \ 21/04/2026)"
+  name: B - Membres
+- description: Gestion des cotisations et paiements
+  name: C - Cotisations
+- description: Comptes et situation financière
+  name: D - Trésorerie
+- description: Gestion des activités
+  name: E - Activités
+- description: Gestion des présences et excuses
+  name: F - Assiduité
+- description: Rapports mensuels par collectivité
+  name: G - Statistiques Collectivité
+- description: Rapports globaux mensuels et annuels de la fédération
+  name: H - Statistiques Fédération
+paths:
+  /collectivites:
+    post:
+      operationId: createCollectivite
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectiviteCreationRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collectivite'
+          description: Collectivité créée avec succès
+      summary: Créer une nouvelle collectivité (demande d’ouverture)
+      tags:
+      - A - Collectivités
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /collectivites/{id_collectivite}/autoriser:
+    patch:
+      operationId: autoriserCollectivite
+      parameters:
+      - explode: false
+        in: path
+        name: id_collectivite
+        required: true
+        schema:
+          type: integer
+        style: simple
+      responses:
+        "200":
+          description: Collectivité autorisée
+      summary: Autoriser l’ouverture d’une collectivité
+      tags:
+      - A - Collectivités
+      x-accepts:
+      - application/json
+  /membres:
+    post:
+      description: |
+        **Nouvelles règles d’admission (21/04/2026)** :
+        - Minimum 2 parrains confirmés
+        - Nombre de parrains de la collectivité cible ≥ nombre de parrains des autres collectivités
+        - Indiquer la nature de la relation avec chaque parrain
+        - Payer 50 000 MGA + l’intégralité des cotisations annuelles obligatoires de la collectivité
+      operationId: createMembre
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MembreCreationRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membre'
+          description: Membre admis avec succès
+        "400":
+          description: Conditions de parrainage ou paiement non respectées
+      summary: Admettre un nouveau membre (procédure renforcée)
+      tags:
+      - B - Membres
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /membres/{id_membre}/changer-collectivite:
+    patch:
+      operationId: changerCollectiviteMembre
+      parameters:
+      - explode: false
+        in: path
+        name: id_membre
+        required: true
+        schema:
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/changerCollectiviteMembre_request'
+        required: true
+      responses:
+        "200":
+          description: Collectivité changée avec succès
+      summary: Changer un membre de collectivité
+      tags:
+      - B - Membres
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /membres/{id_membre}/demissionner:
+    patch:
+      operationId: demissionnerMembre
+      parameters:
+      - explode: false
+        in: path
+        name: id_membre
+        required: true
+        schema:
+          type: integer
+        style: simple
+      responses:
+        "200":
+          description: Membre démissionné avec succès
+      summary: Démissionner un membre
+      tags:
+      - B - Membres
+      x-accepts:
+      - application/json
+  /cotisations:
+    post:
+      operationId: createCotisation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CotisationRequest'
+        required: true
+      responses:
+        "201":
+          description: Cotisation enregistrée
+      summary: Enregistrer un paiement de cotisation
+      tags:
+      - C - Cotisations
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /comptes:
+    post:
+      operationId: createCompte
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompteCreationRequest'
+        required: true
+      responses:
+        "201":
+          description: Compte créé
+      summary: "Créer un compte (Caisse, Bancaire ou Mobile Money)"
+      tags:
+      - D - Trésorerie
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /collectivites/{id_collectivite}/comptes:
+    get:
+      operationId: getComptesCollectivite
+      parameters:
+      - explode: false
+        in: path
+        name: id_collectivite
+        required: true
+        schema:
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/CompteDetaille'
+                type: array
+          description: Liste des comptes
+      summary: Lister les comptes d’une collectivité
+      tags:
+      - D - Trésorerie
+      x-accepts:
+      - application/json
+  /activites:
+    post:
+      operationId: createActivite
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActiviteCreationRequest'
+        required: true
+      responses:
+        "201":
+          description: Activité créée
+      summary: Créer une activité
+      tags:
+      - E - Activités
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /presences:
+    post:
+      operationId: enregistrerPresences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresenceBulkRequest'
+        required: true
+      responses:
+        "201":
+          description: Présences enregistrées
+      summary: Enregistrer les présences à une activité
+      tags:
+      - F - Assiduité
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /collectivites/{id_collectivite}/statistiques/mensuelles:
+    get:
+      operationId: getRapportMensuelCollectivite
+      parameters:
+      - explode: false
+        in: path
+        name: id_collectivite
+        required: true
+        schema:
+          type: integer
+        style: simple
+      - explode: true
+        in: query
+        name: mois
+        required: true
+        schema:
+          format: yyyy-MM
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RapportMensuelCollectivite'
+          description: Statistiques mensuelles
+      summary: Rapport mensuel d’une collectivité
+      tags:
+      - G - Statistiques Collectivité
+      x-accepts:
+      - application/json
+  /federation/statistiques:
+    get:
+      description: "Taux d’assiduité, % de membres à jour de cotisation, nouveaux\
+        \ adhérents par collectivité"
+      operationId: getRapportFederation
+      parameters:
+      - explode: true
+        in: query
+        name: type_periode
+        required: true
+        schema:
+          enum:
+          - mensuel
+          - annuel
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: date_debut
+        required: true
+        schema:
+          format: date
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: date_fin
+        required: true
+        schema:
+          format: date
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RapportFederation'
+          description: Rapport global de la fédération
+      summary: Rapport global mensuel ou annuel de la fédération
+      tags:
+      - H - Statistiques Fédération
+      x-accepts:
+      - application/json
+components:
+  schemas:
+    CollectiviteCreationRequest:
+      example:
+        ville: ville
+        nom_unique: nom_unique
+        specialite_agricole: specialite_agricole
+        numero_unique: COLL-2026-001
+        date_creation: 2000-01-23
+      properties:
+        numero_unique:
+          example: COLL-2026-001
+          type: string
+        nom_unique:
+          type: string
+        ville:
+          type: string
+        specialite_agricole:
+          type: string
+        date_creation:
+          format: date
+          type: string
+      required:
+      - date_creation
+      - nom_unique
+      - numero_unique
+      - specialite_agricole
+      - ville
+    Collectivite:
+      example:
+        ville: ville
+        nom_unique: nom_unique
+        specialite_agricole: specialite_agricole
+        numero_unique: numero_unique
+        date_autorisation_ouverture: 2000-01-23
+        id_collectivite: 0
+        date_creation: 2000-01-23
+      properties:
+        id_collectivite:
+          type: integer
+        numero_unique:
+          type: string
+        nom_unique:
+          type: string
+        ville:
+          type: string
+        specialite_agricole:
+          type: string
+        date_creation:
+          format: date
+          type: string
+        date_autorisation_ouverture:
+          format: date
+          type: string
+          nullable: true
+    MembreCreationRequest:
+      example:
+        parrains:
+        - id_parrain: 6
+          relation: famille
+        - id_parrain: 6
+          relation: famille
+        genre: M
+        adresse: adresse
+        cotisation_annuelle:
+          id_compte: 5
+          montant: 0.14658129805029452
+        telephone: telephone
+        date_adhesion: 2000-01-23
+        nom: nom
+        date_naissance: 2000-01-23
+        email: email
+        prenoms: prenoms
+        metier: metier
+        id_collectivite: 0
+      properties:
+        nom:
+          type: string
+        prenoms:
+          type: string
+        date_naissance:
+          format: date
+          type: string
+        genre:
+          enum:
+          - M
+          - F
+          type: string
+        adresse:
+          type: string
+        metier:
+          type: string
+        telephone:
+          type: string
+        email:
+          format: email
+          type: string
+        date_adhesion:
+          format: date
+          type: string
+        id_collectivite:
+          type: integer
+        parrains:
+          items:
+            $ref: '#/components/schemas/ParrainInfo'
+          minItems: 2
+          type: array
+        cotisation_annuelle:
+          $ref: '#/components/schemas/MembreCreationRequest_cotisation_annuelle'
+      required:
+      - adresse
+      - date_naissance
+      - email
+      - genre
+      - id_collectivite
+      - metier
+      - nom
+      - parrains
+      - prenoms
+      - telephone
+    ParrainInfo:
+      example:
+        id_parrain: 6
+        relation: famille
+      properties:
+        id_parrain:
+          type: integer
+        relation:
+          description: "famille, ami, collègue, voisin, etc."
+          example: famille
+          type: string
+      required:
+      - id_parrain
+      - relation
+    Membre:
+      example:
+        id_membre: 0
+        nom: nom
+        statut: actif
+        prenoms: prenoms
+      properties:
+        id_membre:
+          type: integer
+        nom:
+          type: string
+        prenoms:
+          type: string
+        statut:
+          enum:
+          - actif
+          - demissionne
+          type: string
+    CotisationRequest:
+      example:
+        id_compte: 5
+        type_cotisation: Periodique
+        mode_paiement: Espèce
+        date_versement: 2000-01-23
+        montant: 1.4658129805029452
+        id_membre: 0
+        id_collectivite: 6
+        periode: periode
+      properties:
+        id_membre:
+          type: integer
+        id_collectivite:
+          type: integer
+        type_cotisation:
+          enum:
+          - Periodique
+          - Ponctuelle
+          type: string
+        montant:
+          format: decimal
+          type: number
+        date_versement:
+          format: date
+          type: string
+        mode_paiement:
+          enum:
+          - Espèce
+          - Virement Bancaire
+          - Mobile Money
+          type: string
+        periode:
+          type: string
+        id_compte:
+          type: integer
+      required:
+      - date_versement
+      - id_collectivite
+      - id_compte
+      - id_membre
+      - mode_paiement
+      - montant
+      - type_cotisation
+    Cotisation:
+      properties:
+        id_cotisation:
+          type: integer
+        montant:
+          type: number
+        date_versement:
+          format: date
+          type: string
+    CompteCreationRequest:
+      example:
+        nom_titulaire: nom_titulaire
+        type_compte: Caisse
+        id_collectivite: 0
+      properties:
+        type_compte:
+          enum:
+          - Caisse
+          - Bancaire
+          - MobileMoney
+          type: string
+        nom_titulaire:
+          type: string
+        id_collectivite:
+          type: integer
+      required:
+      - id_collectivite
+      - nom_titulaire
+      - type_compte
+    CompteDetaille:
+      example:
+        numero_compte: numero_compte
+        id_compte: 0
+        nom_titulaire: nom_titulaire
+        type_compte: type_compte
+        solde: 6.027456183070403
+        numero_telephone: numero_telephone
+      properties:
+        id_compte:
+          type: integer
+        type_compte:
+          type: string
+        nom_titulaire:
+          type: string
+        solde:
+          format: decimal
+          type: number
+        numero_compte:
+          type: string
+        numero_telephone:
+          type: string
+    ActiviteCreationRequest:
+      example:
+        cible: Tous
+        date_activite: 2000-01-23
+        obligatoire: true
+        id_collectivite: 0
+        type_activite: Assemblee_Generale_Mensuelle
+      properties:
+        id_collectivite:
+          type: integer
+          nullable: true
+        type_activite:
+          enum:
+          - Assemblee_Generale_Mensuelle
+          - Formation_Obligatoire_Juniors
+          - Activite_Exceptionnelle
+          - Assemblee_Generale_Annuelle_Federation
+          - Autre
+          type: string
+        date_activite:
+          format: date
+          type: string
+        obligatoire:
+          default: true
+          type: boolean
+        cible:
+          default: Tous
+          type: string
+      required:
+      - date_activite
+      - type_activite
+    PresenceBulkRequest:
+      example:
+        id_activite: 0
+        presences:
+        - est_present: true
+          est_excuse: true
+          motif_excuse: motif_excuse
+          id_membre: 6
+        - est_present: true
+          est_excuse: true
+          motif_excuse: motif_excuse
+          id_membre: 6
+      properties:
+        id_activite:
+          type: integer
+        presences:
+          items:
+            $ref: '#/components/schemas/PresenceBulkRequest_presences_inner'
+          type: array
+      required:
+      - id_activite
+      - presences
+    RapportMensuelCollectivite:
+      example:
+        nombre_membres_actifs: 5
+        effectif_total: 6
+        taux_assiduite_globale: 1.4658129
+        id_collectivite: 0
+        mois: mois
+      properties:
+        id_collectivite:
+          type: integer
+        mois:
+          type: string
+        effectif_total:
+          type: integer
+        taux_assiduite_globale:
+          format: float
+          type: number
+        nombre_membres_actifs:
+          type: integer
+    RapportFederation:
+      example:
+        date_debut: 2000-01-23
+        date_fin: 2000-01-23
+        type_periode: mensuel
+        collectivites:
+        - ville: ville
+          nom_unique: nom_unique
+          taux_assiduite_globale: 6.0274563
+          pourcentage_membres_a_jour_cotisation: 1.4658129
+          effectif_total: 5
+          nombre_nouveaux_adherents: 5
+          id_collectivite: 0
+        - ville: ville
+          nom_unique: nom_unique
+          taux_assiduite_globale: 6.0274563
+          pourcentage_membres_a_jour_cotisation: 1.4658129
+          effectif_total: 5
+          nombre_nouveaux_adherents: 5
+          id_collectivite: 0
+        totaux_generaux:
+          nombre_total_collectivites: 2
+          nombre_total_membres: 7
+          taux_assiduite_federal: 9.301444
+      properties:
+        type_periode:
+          enum:
+          - mensuel
+          - annuel
+          type: string
+        date_debut:
+          format: date
+          type: string
+        date_fin:
+          format: date
+          type: string
+        collectivites:
+          items:
+            $ref: '#/components/schemas/StatistiqueCollectiviteFederation'
+          type: array
+        totaux_generaux:
+          $ref: '#/components/schemas/RapportFederation_totaux_generaux'
+    StatistiqueCollectiviteFederation:
+      example:
+        ville: ville
+        nom_unique: nom_unique
+        taux_assiduite_globale: 6.0274563
+        pourcentage_membres_a_jour_cotisation: 1.4658129
+        effectif_total: 5
+        nombre_nouveaux_adherents: 5
+        id_collectivite: 0
+      properties:
+        id_collectivite:
+          type: integer
+        nom_unique:
+          type: string
+        ville:
+          type: string
+        taux_assiduite_globale:
+          format: float
+          type: number
+        pourcentage_membres_a_jour_cotisation:
+          format: float
+          type: number
+        nombre_nouveaux_adherents:
+          type: integer
+        effectif_total:
+          type: integer
+    changerCollectiviteMembre_request:
+      properties:
+        id_nouvelle_collectivite:
+          type: integer
+    MembreCreationRequest_cotisation_annuelle:
+      example:
+        id_compte: 5
+        montant: 0.14658129805029452
+      properties:
+        montant:
+          format: decimal
+          minimum: 0
+          type: number
+        id_compte:
+          type: integer
+      required:
+      - id_compte
+      - montant
+    PresenceBulkRequest_presences_inner:
+      example:
+        est_present: true
+        est_excuse: true
+        motif_excuse: motif_excuse
+        id_membre: 6
+      properties:
+        id_membre:
+          type: integer
+        est_present:
+          type: boolean
+        est_excuse:
+          type: boolean
+        motif_excuse:
+          type: string
+      required:
+      - est_present
+      - id_membre
+    RapportFederation_totaux_generaux:
+      example:
+        nombre_total_collectivites: 2
+        nombre_total_membres: 7
+        taux_assiduite_federal: 9.301444
+      properties:
+        nombre_total_collectivites:
+          type: integer
+        nombre_total_membres:
+          type: integer
+        taux_assiduite_federal:
+          format: float
+          type: number
+  securitySchemes:
+    BearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+
