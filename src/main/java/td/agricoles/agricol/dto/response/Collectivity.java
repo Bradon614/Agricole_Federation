@@ -11,6 +11,8 @@ import java.util.List;
 @AllArgsConstructor
 public class Collectivity {
     private String id;
+    private String number;
+    private String name;
     private String location;
     private CollectivityStructure structure;
     private List<Member> members;

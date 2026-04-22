@@ -1,9 +1,6 @@
 package td.agricoles.agricol.Services;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-import td.agricoles.agricol.dto.MemberIdentifier;
 import td.agricoles.agricol.dto.request.CreateMember;
 import td.agricoles.agricol.dto.response.Member;
 import td.agricoles.agricol.exception.BadRequestException;
@@ -46,7 +43,7 @@ public class MemberService {
             throw new BadRequestException("Registration fee and membership dues must be paid");
         }
 
-        List<MemberIdentifier> referees = create.getReferees();
+        List<String> referees = create.getReferees();
         if (referees == null || referees.size() < 2) {
             throw new BadRequestException("At least 2 referees required");
         }
@@ -64,8 +61,7 @@ public class MemberService {
         int targetCount = 0;
         int otherCount = 0;
 
-        for (MemberIdentifier refId : referees) {
-            String refIdStr = refId.getId();
+        for (String refIdStr : referees) {
             try {
                 Member refMember = memberRepository.findById(refIdStr);
                 if (refMember == null) {

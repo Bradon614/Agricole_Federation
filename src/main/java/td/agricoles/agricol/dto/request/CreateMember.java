@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import td.agricoles.agricol.dto.MemberIdentifier;
 import td.agricoles.agricol.dto.MemberInformation;
 
 import java.util.List;
@@ -15,7 +14,7 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class CreateMember extends MemberInformation {
     private String collectivityIdentifier;
-    private List<MemberIdentifier> referees;
+    private List<String> referees;
     private boolean registrationFeePaid;
     private boolean membershipDuesPaid;
 }

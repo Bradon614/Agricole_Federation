@@ -7,9 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateCollectivityStructure {
-    private String president;
-    private String vicePresident;
-    private String treasurer;
-    private String secretary;
+public class CollectiveIdentifiersAssignment {
+    private String number;
+    private String name;
+
 }

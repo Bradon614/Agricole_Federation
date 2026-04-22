@@ -80,4 +80,39 @@ public class CollectiveService {
         }
     }
 
+
+
+    public Collectivity assignIdentifiers(String collectiveId, String number, String name) {
+        try {
+
+            if (!collectiveRepository.exists(collectiveId)) {
+                throw new NotFoundException("Collective not found: " + collectiveId);
+            }
+
+            if (collectiveRepository.hasNumberAssigned(collectiveId)) {
+                throw new BadRequestException("Collective already has a number assigned and it cannot be changed.");
+            }
+
+
+            if (collectiveRepository.hasNameAssigned(collectiveId)) {
+                throw new BadRequestException("Collective already has a name assigned and it cannot be changed.");
+            }
+
+
+            if (collectiveRepository.numberExists(number)) {
+                throw new BadRequestException("Number '" + number + "' is already used by another collective.");
+            }
+
+
+            if (collectiveRepository.nameExists(name)) {
+                throw new BadRequestException("Name '" + name + "' is already used by another collective.");
+            }
+
+            return collectiveRepository.assignIdentifiers(collectiveId, number, name);
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Database error while assigning identifiers", e);
+        }
+    }
+
 }

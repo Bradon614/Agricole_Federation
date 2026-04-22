@@ -2,9 +2,8 @@ package td.agricoles.agricol.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import td.agricoles.agricol.dto.request.CollectiveIdentifiersAssignment;
 import td.agricoles.agricol.dto.response.Collectivity;
 import td.agricoles.agricol.dto.request.CreateCollectivity;
 import td.agricoles.agricol.dto.request.CreateMember;
@@ -46,6 +45,22 @@ public class FederationController {
         try {
             List<Member> created = memberService.createMembers(members);
             return new ResponseEntity<>(created, HttpStatus.CREATED);
+        } catch (BadRequestException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Internal server error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PatchMapping("/collectivities/{id}/identifiers")
+    public ResponseEntity<?> assignIdentifiers(
+            @PathVariable String id,
+            @RequestBody CollectiveIdentifiersAssignment assignment) {
+        try {
+            Collectivity updated = collectiveService.assignIdentifiers(id, assignment.getNumber(), assignment.getName());
+            return ResponseEntity.ok(updated);
         } catch (BadRequestException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (NotFoundException e) {

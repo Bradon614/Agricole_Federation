@@ -1,497 +1,243 @@
 openapi: 3.1.0
 info:
-  title: National Federation of Agricultural Collectives API
+  title: Agricultural federation API
   description: |
-    REST API for the management of the National Federation of Agricultural Collectives in Madagascar.
-    Updated on April 21, 2026:
-    - New reinforced membership admission rules (B-2)
-    - Addition of federation-wide global statistics (H)
-  version: 1.1.0
-
+    # Versioning
+    This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are : 
+    - v0.0.1 (2026-04-21) : POST /collectivities for collectivities creation and POST /members for members creation.
+    - v0.1.0 (2026-04-22) : PATCH /collectivities/{id}/identifiers for assigning unique number and name to a collective.
+  version: 0.1.0
 servers:
   - url: 'https://localhost:8080'
-tags:
-  - name: A - Collectives
-    description: Opening and management of agricultural collectives
-  - name: B - Members
-    description: Member admission, transfer and resignation (rules updated on 21/04/2026)
-  - name: C - Contributions
-    description: Contributions and payments management
-  - name: D - Treasury
-    description: Accounts and financial situation
-  - name: E - Activities
-    description: Activities management
-  - name: F - Attendance
-    description: Attendance and excuses management
-  - name: G - Collective Statistics
-    description: Monthly reports per collective
-  - name: H - Federation Statistics
-    description: Global monthly and annual reports of the federation
-
 paths:
-
-  # =============================================
-  # A - COLLECTIVES
-  # =============================================
-  /collectives:
+  '/collectivities':
     post:
-      tags: [A - Collectives]
-      summary: Create a new collective (opening request)
-      operationId: createCollective
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CollectiveCreationRequest'
-      responses:
-        '201':
-          description: Collective created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Collective'
-
-  /collectives/{id_collective}/authorize:
-    patch:
-      tags: [A - Collectives]
-      summary: Authorize the opening of a collective
-      operationId: authorizeCollective
-      parameters:
-        - name: id_collective
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Collective authorized successfully
-
-  # =============================================
-  # B - MEMBERS (updated 21/04/2026)
-  # =============================================
-  /members:
-    post:
-      tags: [B - Members]
-      summary: Admit a new member (reinforced procedure)
+      summary: Create list of collectivities
       description: |
-        **New admission rules (April 21, 2026)**:
-        - Must be sponsored by **at least 2 confirmed members**
-        - Number of sponsors from the target collective must be **greater than or equal** to the number of sponsors from other collectives
-        - Must specify the nature of the relationship with each sponsor
-        - Must pay 50,000 MGA admission fee + full annual mandatory contributions of the target collective
-      operationId: createMember
+        During collectivity request body creation, only members ID are provided to identify members. 
+        But the response content includes members information, not only their IDs.
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MemberCreationRequest'
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateCollectivity'
       responses:
-        '201':
-          description: Member admitted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Member'
-        '400':
-          description: Sponsorship conditions or payment not respected
-
-  /members/{id_member}/change-collective:
-    patch:
-      tags: [B - Members]
-      summary: Change a member's collective
-      operationId: changeMemberCollective
-      parameters:
-        - name: id_member
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                new_collective_id:
-                  type: integer
-      responses:
-        '200':
-          description: Collective changed successfully
-
-  /members/{id_member}/resign:
-    patch:
-      tags: [B - Members]
-      summary: Resign a member
-      operationId: resignMember
-      parameters:
-        - name: id_member
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Member resigned successfully
-
-  # =============================================
-  # C - CONTRIBUTIONS
-  # =============================================
-  /contributions:
-    post:
-      tags: [C - Contributions]
-      summary: Record a contribution payment
-      operationId: createContribution
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ContributionRequest'
-      responses:
-        '201':
-          description: Contribution recorded successfully
-
-  # =============================================
-  # D - TREASURY
-  # =============================================
-  /accounts:
-    post:
-      tags: [D - Treasury]
-      summary: Create an account (Cash, Bank or Mobile Money)
-      operationId: createAccount
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AccountCreationRequest'
-      responses:
-        '201':
-          description: Account created successfully
-
-  /collectives/{id_collective}/accounts:
-    get:
-      tags: [D - Treasury]
-      summary: List accounts of a collective
-      operationId: getCollectiveAccounts
-      parameters:
-        - name: id_collective
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: List of accounts
+        201:
+          description: List of created collectivities
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AccountDetail'
+                  $ref: '#/components/schemas/Collectivity'
+        400:
+          description: Collectivity without federation approval or structure missing.
+        404:
+          description: Member not found.
 
-  # =============================================
-  # E - ACTIVITIES
-  # =============================================
-  /activities:
-    post:
-      tags: [E - Activities]
-      summary: Create an activity
-      operationId: createActivity
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ActivityCreationRequest'
-      responses:
-        '201':
-          description: Activity created successfully
-
-  # =============================================
-  # F - ATTENDANCE
-  # =============================================
-  /attendances:
-    post:
-      tags: [F - Attendance]
-      summary: Record attendances for an activity
-      operationId: recordAttendances
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AttendanceBulkRequest'
-      responses:
-        '201':
-          description: Attendances recorded successfully
-
-  # =============================================
-  # G - COLLECTIVE STATISTICS
-  # =============================================
-  /collectives/{id_collective}/statistics/monthly:
-    get:
-      tags: [G - Collective Statistics]
-      summary: Monthly report of a collective
-      operationId: getMonthlyCollectiveReport
+  '/collectivities/{id}/identifiers':
+    patch:
+      summary: Assign unique number and name to a collective
+      description: |
+        This endpoint allows the federation to assign a **unique number** and **unique name** to an existing collective.
+        - Once assigned, these values **cannot be changed**.
+        - The number and name must be unique across all collectivities.
+        - If the collective already has a number or name, the request will be rejected.
       parameters:
-        - name: id_collective
+        - name: id
           in: path
           required: true
           schema:
-            type: integer
-        - name: month
-          in: query
-          required: true
-          schema:
             type: string
-            format: yyyy-MM
+          description: The internal ID of the collective (returned at creation)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectiveIdentifiersAssignment'
       responses:
-        '200':
-          description: Monthly statistics
+        200:
+          description: Identifiers successfully assigned. Returns the updated collective.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MonthlyCollectiveReport'
+                $ref: '#/components/schemas/Collectivity'
+        400:
+          description: |
+            Bad request. Possible reasons:
+            - Number or name already exists.
+            - Collective already has a number/name assigned.
+            - Invalid format.
+        404:
+          description: Collective not found.
 
-  # =============================================
-  # H - FEDERATION STATISTICS (NEW)
-  # =============================================
-  /federation/statistics:
-    get:
-      tags: [H - Federation Statistics]
-      summary: Global monthly or annual federation report
-      description: attendance rate, % of members up to date on contributions, number of new members
-      operationId: getFederationReport
-      parameters:
-        - name: period_type
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [monthly, yearly]
-        - name: start_date
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-        - name: end_date
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
+  '/members':
+    post:
+      summary: Create list of members
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateMember'
       responses:
-        '200':
-          description: Global federation report
+        201:
+          description: List of created members
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FederationReport'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+        400:
+          description: |
+            The following case must return a bad request exception : 
+            - Member with bad referees or without proper payment.
+            - Membership dues not paid or registration fee not paid.
+        404:
+          description: Either collectivity or member not found.
 
 components:
   schemas:
-
-    # A - Collectives
-    CollectiveCreationRequest:
-      type: object
-      required: [unique_number, unique_name, city, agricultural_specialty, creation_date]
-      properties:
-        unique_number: { type: string, example: "COLL-2026-001" }
-        unique_name: { type: string }
-        city: { type: string }
-        agricultural_specialty: { type: string }
-        creation_date: { type: string, format: date }
-
-    Collective:
+    CreateCollectivity:
       type: object
       properties:
-        id_collective: { type: integer }
-        unique_number: { type: string }
-        unique_name: { type: string }
-        city: { type: string }
-        agricultural_specialty: { type: string }
-        creation_date: { type: string, format: date }
-        authorization_date: { type: string, format: date, nullable: true }
+        location:
+          type: string
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberIdentifier'
+        federationApproval:
+          type: boolean
+        structure:
+          $ref: '#/components/schemas/CreateCollectivityStructure'
 
-    # B - Members (updated)
-    MemberCreationRequest:
+    CreateCollectivityStructure:
+      type: object
+      properties:
+        president:
+          $ref: '#/components/schemas/MemberIdentifier'
+        vicePresident:
+          $ref: '#/components/schemas/MemberIdentifier'
+        treasurer:
+          $ref: '#/components/schemas/MemberIdentifier'
+        secretary:
+          $ref: '#/components/schemas/MemberIdentifier'
+
+    CollectivityStructure:
+      type: object
+      properties:
+        president:
+          $ref: '#/components/schemas/Member'
+        vicePresident:
+          $ref: '#/components/schemas/Member'
+        treasurer:
+          $ref: '#/components/schemas/Member'
+        secretary:
+          $ref: '#/components/schemas/Member'
+
+    Collectivity:
+      type: object
+      properties:
+        id:
+          type: string
+        number:
+          type: string
+          description: Unique number assigned by the federation (once set, immutable)
+        name:
+          type: string
+          description: Unique name assigned by the federation (once set, immutable)
+        location:
+          type: string
+        structure:
+          $ref: '#/components/schemas/CollectivityStructure'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+
+    CollectiveIdentifiersAssignment:
       type: object
       required:
-        - first_name
-        - last_name
-        - birth_date
-        - gender
-        - address
-        - occupation
-        - phone
-        - email
-        - collective_id
-        - sponsors
+        - number
+        - name
       properties:
-        first_name: { type: string }
-        last_name: { type: string }
-        birth_date: { type: string, format: date }
-        gender:
+        number:
           type: string
-          enum: [M, F]
-        address: { type: string }
-        occupation: { type: string }
-        phone: { type: string }
-        email: { type: string, format: email }
-        adhesion_date: { type: string, format: date }
-        collective_id: { type: integer }
-        sponsors:
-          type: array
-          minItems: 2
-          items:
-            $ref: '#/components/schemas/SponsorInfo'
-        annual_contribution:
-          type: object
-          required: [amount, account_id]
-          properties:
-            amount: { type: number, format: decimal, minimum: 0 }
-            account_id: { type: integer }
+          description: The unique number to assign
+          example: "FED-2026-042"
+        name:
+          type: string
+          description: The unique name to assign
+          example: "Collectivité des Riziculteurs d'Antsirabe"
 
-    SponsorInfo:
+    MemberIdentifier:
+      type: string
+
+    CreateMember:
       type: object
-      required: [sponsor_id, relationship]
+      allOf:
+        - $ref: '#/components/schemas/MemberInformation'
       properties:
-        sponsor_id: { type: integer }
-        relationship:
+        collectivityIdentifier:
           type: string
-          example: "family"
-          description: "family, friend, colleague, neighbor, etc."
+        referees:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberIdentifier'
+        registrationFeePaid:
+          type: boolean
+        membershipDuesPaid:
+          type: boolean
+
+    MemberInformation:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/Gender'
+        address:
+          type: string
+        profession:
+          type: string
+        phoneNumber:
+          type: integer
+        email:
+          type: string
+        occupation:
+          $ref: '#/components/schemas/MemberOccupation'
 
     Member:
       type: object
+      allOf:
+        - $ref: '#/components/schemas/MemberInformation'
       properties:
-        id_member: { type: integer }
-        first_name: { type: string }
-        last_name: { type: string }
-        status:
-          type: string
-          enum: [active, resigned]
+        id:
+          $ref: '#/components/schemas/MemberIdentifier'
 
-    # C - Contributions
-    ContributionRequest:
-      type: object
-      required: [member_id, collective_id, type, amount, payment_date, payment_method, account_id]
-      properties:
-        member_id: { type: integer }
-        collective_id: { type: integer }
-        type:
-          type: string
-          enum: [Periodic, OneTime]
-        amount: { type: number, format: decimal }
-        payment_date: { type: string, format: date }
-        payment_method:
-          type: string
-          enum: [Cash, BankTransfer, MobileMoney]
-        period: { type: string }
-        account_id: { type: integer }
+    Gender:
+      type: string
+      enum:
+        - MALE
+        - FEMALE
 
-    # D - Accounts
-    AccountCreationRequest:
-      type: object
-      required: [account_type, holder_name, collective_id]
-      properties:
-        account_type:
-          type: string
-          enum: [Cash, Bank, MobileMoney]
-        holder_name: { type: string }
-        collective_id: { type: integer }
-
-    AccountDetail:
-      type: object
-      properties:
-        id_account: { type: integer }
-        account_type: { type: string }
-        holder_name: { type: string }
-        balance: { type: number, format: decimal }
-        account_number: { type: string }
-        phone_number: { type: string }
-
-    # E - Activities
-    ActivityCreationRequest:
-      type: object
-      required: [activity_type, activity_date]
-      properties:
-        collective_id: { type: integer, nullable: true }
-        activity_type:
-          type: string
-          enum: [MonthlyGeneralMeeting, MandatoryTrainingJuniors, ExceptionalActivity, AnnualFederationMeeting, Other]
-        activity_date: { type: string, format: date }
-        is_mandatory: { type: boolean, default: true }
-        target: { type: string, default: "All" }
-
-    # F - Attendance
-    AttendanceBulkRequest:
-      type: object
-      required: [activity_id, attendances]
-      properties:
-        activity_id: { type: integer }
-        attendances:
-          type: array
-          items:
-            type: object
-            required: [member_id, is_present]
-            properties:
-              member_id: { type: integer }
-              is_present: { type: boolean }
-              is_excused: { type: boolean }
-              excuse_reason: { type: string }
-
-    # G - Collective Statistics
-    MonthlyCollectiveReport:
-      type: object
-      properties:
-        collective_id: { type: integer }
-        month: { type: string }
-        total_members: { type: integer }
-        overall_attendance_rate: { type: number, format: float }
-        active_members: { type: integer }
-
-    # H - Federation Statistics
-    FederationReport:
-      type: object
-      properties:
-        period_type:
-          type: string
-          enum: [monthly, yearly]
-        start_date: { type: string, format: date }
-        end_date: { type: string, format: date }
-        collectives:
-          type: array
-          items:
-            $ref: '#/components/schemas/CollectiveFederationStatistic'
-        overall_totals:
-          type: object
-          properties:
-            total_collectives: { type: integer }
-            total_members: { type: integer }
-            federal_attendance_rate: { type: number, format: float }
-
-    CollectiveFederationStatistic:
-      type: object
-      properties:
-        collective_id: { type: integer }
-        collective_name: { type: string }
-        city: { type: string }
-        overall_attendance_rate: { type: number, format: float }
-        percentage_members_up_to_date: { type: number, format: float }
-        new_members: { type: integer }
-        total_members: { type: integer }
-
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-security:
-  - BearerAuth: []
+    MemberOccupation:
+      type: string
+      enum:
+        - JUNIOR
+        - SENIOR
+        - SECRETARY
+        - TREASURER
+        - VICE_PRESIDENT
+        - PRESIDENT
