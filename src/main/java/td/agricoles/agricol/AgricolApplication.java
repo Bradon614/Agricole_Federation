@@ -16,29 +16,29 @@ public class AgricolApplication {
         SpringApplication.run(AgricolApplication.class, args);
     }
 
-    @Bean
-    public MemberRepository memberRepository() {
-        return new MemberRepository();
-    }
-
-    @Bean
-    public CollectiveRepository collectiveRepository() {
-        return new CollectiveRepository();
-    }
-
-    @Bean
-    public CollectiveService collectiveService() {
-        return new CollectiveService(collectiveRepository(), memberRepository());
-    }
-
-    @Bean
-    public MemberService memberService() {
-        return new MemberService(memberRepository(), collectiveRepository());
-    }
-
-    @Bean
-    public FederationController federationController() {
-        return new FederationController(collectiveService(), memberService());
-    }
+//    @Bean
+//    public MemberRepository memberRepository() {
+//        return new MemberRepository();
+//    }
+//
+//    @Bean
+//    public CollectiveRepository collectiveRepository() {
+//        return new CollectiveRepository();
+//    }
+//
+//    @Bean
+//    public CollectiveService collectiveService() {
+//        return new CollectiveService(collectiveRepository(), memberRepository());
+//    }
+//
+//    @Bean
+//    public MemberService memberService() {
+//        return new MemberService(memberRepository(), collectiveRepository());
+//    }
+//
+//    @Bean
+//    public FederationController federationController() {
+//        return new FederationController(collectiveService(), memberService());
+//    }
 
 }

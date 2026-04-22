@@ -3,20 +3,17 @@ package td.agricoles.agricol.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import td.agricoles.agricol.dto.request.CollectiveIdentifiersAssignment;
-import td.agricoles.agricol.dto.request.CreateMemberPayment;
-import td.agricoles.agricol.dto.response.Collectivity;
-import td.agricoles.agricol.dto.request.CreateCollectivity;
-import td.agricoles.agricol.dto.request.CreateMember;
-import td.agricoles.agricol.dto.response.Member;
+import td.agricoles.agricol.dto.request.*;
+import td.agricoles.agricol.dto.response.*;
 import td.agricoles.agricol.Services.CollectiveService;
 import td.agricoles.agricol.Services.MemberService;
-import td.agricoles.agricol.dto.response.MemberPayment;
 import td.agricoles.agricol.exception.BadRequestException;
 import td.agricoles.agricol.exception.NotFoundException;
+import td.agricoles.agricol.repository.CollectiveRepository;
 import td.agricoles.agricol.repository.MemberRepository;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -78,7 +75,7 @@ public class FederationController {
     @GetMapping("/collectivities/{id}/membershipFees")
     public ResponseEntity<?> getMembershipFees(@PathVariable String id) {
         try {
-            List<MembershipFee> fees = collectiveRepository.findMembershipFeesByCollectiveId(id);
+            List<MembershipFee> fees = CollectiveRepository.findMembershipFeesByCollectiveId(id);
             return ResponseEntity.ok(fees);
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
@@ -91,7 +88,7 @@ public class FederationController {
     public ResponseEntity<?> createMembershipFees(@PathVariable String id,
                                                   @RequestBody List<CreateMembershipFee> fees) {
         try {
-            if (!collectiveRepository.exists(id)) {
+            if (!CollectiveRepository.exists(id)) {
                 throw new NotFoundException("Collectivity not found");
             }
             // Validation: frequency valide, amount > 0
@@ -100,7 +97,7 @@ public class FederationController {
                     throw new BadRequestException("Amount must be positive");
                 }
             }
-            List<MembershipFee> created = collectiveRepository.saveMembershipFees(id, fees);
+            List<MembershipFee> created = CollectiveRepository.saveMembershipFees(id, fees);
             return ResponseEntity.ok(created);
         } catch (BadRequestException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -120,7 +117,7 @@ public class FederationController {
                 throw new BadRequestException("'from' date must be before 'to' date");
             }
             List<CollectivityTransaction> transactions =
-                    collectiveRepository.findTransactionsByCollectiveIdAndPeriod(id, from, to);
+                    CollectiveRepository.findTransactionsByCollectiveIdAndPeriod(id, from, to);
             return ResponseEntity.ok(transactions);
         } catch (BadRequestException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);

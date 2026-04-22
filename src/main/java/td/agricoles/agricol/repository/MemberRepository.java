@@ -209,7 +209,7 @@ public class MemberRepository {
 
 
 
-    public List<MemberPayment> savePayments(String memberId, List<CreateMemberPayment> payments) throws SQLException {
+    public static List<MemberPayment> savePayments(String memberId, List<CreateMemberPayment> payments) throws SQLException {
         List<MemberPayment> result = new ArrayList<>();
         String sql = """
         INSERT INTO member_payment (id_member, amount, id_membership_fee, id_account_credited, payment_mode, creation_date)

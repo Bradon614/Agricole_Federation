@@ -18,7 +18,7 @@ public class CollectiveRepository {
 
     private final MemberRepository memberRepository = new MemberRepository();
 
-    public boolean exists(String collectiveId) throws SQLException {
+    public static boolean exists(String collectiveId) throws SQLException {
         String sql = "SELECT 1 FROM collective WHERE id_collective = ?";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -273,8 +273,8 @@ public class CollectiveRepository {
                 if (rs.next()) {
                     Collectivity coll = new Collectivity();
                     coll.setId(String.valueOf(rs.getInt("id_collective")));
-                    coll.setNumber(rs.getString("unique_number"));
-                    coll.setName(rs.getString("unique_name"));
+//                    coll.setNumber(rs.getString("unique_number"));
+//                    coll.setName(rs.getString("unique_name"));
                     coll.setLocation(rs.getString("city"));
                     return coll;
                 }
@@ -285,7 +285,7 @@ public class CollectiveRepository {
 
 
     // Récupérer les frais d'adhésion (membership fees) actifs d'une collectivité
-    public List<MembershipFee> findMembershipFeesByCollectiveId(String collectiveId) throws SQLException {
+    public static List<MembershipFee> findMembershipFeesByCollectiveId(String collectiveId) throws SQLException {
         List<MembershipFee> fees = new ArrayList<>();
         String sql = """
         SELECT id_membership_fee, eligible_from, frequency, amount, label, status
@@ -301,7 +301,7 @@ public class CollectiveRepository {
                     MembershipFee fee = new MembershipFee();
                     fee.setId(rs.getString("id_membership_fee"));
                     fee.setEligibleFrom(rs.getDate("eligible_from").toLocalDate());
-                    fee.setFrequency(Frequency.valueOf(rs.getString("frequency")));
+//                    fee.setFrequency(Frequency.valueOf(rs.getString("frequency")));
                     fee.setAmount(rs.getDouble("amount"));
                     fee.setLabel(rs.getString("label"));
                     fee.setStatus(ActivityStatus.valueOf(rs.getString("status")));
@@ -313,7 +313,7 @@ public class CollectiveRepository {
     }
 
 
-    public List<MembershipFee> saveMembershipFees(String collectiveId, List<CreateMembershipFee> fees) throws SQLException {
+    public static List<MembershipFee> saveMembershipFees(String collectiveId, List<CreateMembershipFee> fees) throws SQLException {
         List<MembershipFee> created = new ArrayList<>();
         String sql = """
         INSERT INTO membership_fee (id_collective, eligible_from, frequency, amount, label, status)
@@ -325,7 +325,7 @@ public class CollectiveRepository {
             for (CreateMembershipFee fee : fees) {
                 stmt.setInt(1, Integer.parseInt(collectiveId));
                 stmt.setDate(2, Date.valueOf(fee.getEligibleFrom()));
-                stmt.setString(3, fee.getFrequency().name());
+//                stmt.setString(3, fee.getFrequency().name());
                 stmt.setDouble(4, fee.getAmount());
                 stmt.setString(5, fee.getLabel());
                 ResultSet rs = stmt.executeQuery();
@@ -345,7 +345,7 @@ public class CollectiveRepository {
     }
 
 
-    public List<CollectivityTransaction> findTransactionsByCollectiveIdAndPeriod(
+    public static List<CollectivityTransaction> findTransactionsByCollectiveIdAndPeriod(
             String collectiveId, LocalDate from, LocalDate to) throws SQLException {
         List<CollectivityTransaction> transactions = new ArrayList<>();
         String sql = """
