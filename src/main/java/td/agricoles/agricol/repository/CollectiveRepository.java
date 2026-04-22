@@ -1,10 +1,12 @@
 package td.agricoles.agricol.repository;
 
 import td.agricoles.agricol.config.DatabaseConfig;
+import td.agricoles.agricol.dto.enums.ActivityStatus;
+import td.agricoles.agricol.dto.enums.Frequency;
+import td.agricoles.agricol.dto.enums.PaymentMode;
 import td.agricoles.agricol.dto.request.CreateCollectivity;
-import td.agricoles.agricol.dto.response.Collectivity;
-import td.agricoles.agricol.dto.response.CollectivityStructure;
-import td.agricoles.agricol.dto.response.Member;
+import td.agricoles.agricol.dto.request.CreateMembershipFee;
+import td.agricoles.agricol.dto.response.*;
 import td.agricoles.agricol.exception.NotFoundException;
 
 import java.sql.*;
@@ -101,7 +103,7 @@ public class CollectiveRepository {
                 }
             }
 
-            // 4. Assign specific positions
+
             assignPosition(conn, mandateId, create.getStructure().getPresident(), "President");
             assignPosition(conn, mandateId, create.getStructure().getVicePresident(), "Vice President");
             assignPosition(conn, mandateId, create.getStructure().getTreasurer(), "Treasurer");
@@ -109,7 +111,7 @@ public class CollectiveRepository {
 
             conn.commit();
 
-            // Build response
+
             Collectivity coll = new Collectivity();
             coll.setId(String.valueOf(newId));
             coll.setLocation(create.getLocation());
@@ -173,7 +175,7 @@ public class CollectiveRepository {
         }
     }
 
-    // ---------- Feature J methods ----------
+
     public boolean hasNumberAssigned(String collectiveId) throws SQLException {
         String sql = "SELECT unique_number FROM collective WHERE id_collective = ?";
         try (Connection conn = DatabaseConfig.getConnection();
@@ -279,5 +281,105 @@ public class CollectiveRepository {
                 throw new NotFoundException("Collective not found: " + collectiveId);
             }
         }
+    }
+
+
+    // Récupérer les frais d'adhésion (membership fees) actifs d'une collectivité
+    public List<MembershipFee> findMembershipFeesByCollectiveId(String collectiveId) throws SQLException {
+        List<MembershipFee> fees = new ArrayList<>();
+        String sql = """
+        SELECT id_membership_fee, eligible_from, frequency, amount, label, status
+        FROM membership_fee
+        WHERE id_collective = ?
+        ORDER BY eligible_from DESC
+    """;
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, Integer.parseInt(collectiveId));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    MembershipFee fee = new MembershipFee();
+                    fee.setId(rs.getString("id_membership_fee"));
+                    fee.setEligibleFrom(rs.getDate("eligible_from").toLocalDate());
+                    fee.setFrequency(Frequency.valueOf(rs.getString("frequency")));
+                    fee.setAmount(rs.getDouble("amount"));
+                    fee.setLabel(rs.getString("label"));
+                    fee.setStatus(ActivityStatus.valueOf(rs.getString("status")));
+                    fees.add(fee);
+                }
+            }
+        }
+        return fees;
+    }
+
+
+    public List<MembershipFee> saveMembershipFees(String collectiveId, List<CreateMembershipFee> fees) throws SQLException {
+        List<MembershipFee> created = new ArrayList<>();
+        String sql = """
+        INSERT INTO membership_fee (id_collective, eligible_from, frequency, amount, label, status)
+        VALUES (?, ?, ?, ?, ?, 'ACTIVE')
+        RETURNING id_membership_fee
+    """;
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            for (CreateMembershipFee fee : fees) {
+                stmt.setInt(1, Integer.parseInt(collectiveId));
+                stmt.setDate(2, Date.valueOf(fee.getEligibleFrom()));
+                stmt.setString(3, fee.getFrequency().name());
+                stmt.setDouble(4, fee.getAmount());
+                stmt.setString(5, fee.getLabel());
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    MembershipFee mf = new MembershipFee();
+                    mf.setId(rs.getString(1));
+                    mf.setEligibleFrom(fee.getEligibleFrom());
+                    mf.setFrequency(fee.getFrequency());
+                    mf.setAmount(fee.getAmount());
+                    mf.setLabel(fee.getLabel());
+                    mf.setStatus(ActivityStatus.ACTIVE);
+                    created.add(mf);
+                }
+            }
+        }
+        return created;
+    }
+
+
+    public List<CollectivityTransaction> findTransactionsByCollectiveIdAndPeriod(
+            String collectiveId, LocalDate from, LocalDate to) throws SQLException {
+        List<CollectivityTransaction> transactions = new ArrayList<>();
+        String sql = """
+        SELECT t.id_transaction, t.creation_date, t.amount, t.payment_mode,
+               a.id_account, a.account_type, a.holder_name, a.balance,
+               m.id_member, m.last_name, m.first_names
+        FROM transaction t
+        JOIN account a ON t.id_account_credited = a.id_account
+        JOIN member m ON t.id_member_debited = m.id_member
+        WHERE a.id_collective = ?
+          AND t.creation_date BETWEEN ? AND ?
+        ORDER BY t.creation_date DESC
+    """;
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, Integer.parseInt(collectiveId));
+            stmt.setDate(2, Date.valueOf(from));
+            stmt.setDate(3, Date.valueOf(to));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    CollectivityTransaction tx = new CollectivityTransaction();
+                    tx.setId(rs.getString("id_transaction"));
+                    tx.setCreationDate(rs.getDate("creation_date").toLocalDate());
+                    tx.setAmount(rs.getDouble("amount"));
+                    tx.setPaymentMode(PaymentMode.valueOf(rs.getString("payment_mode")));
+                    Member member = new Member();
+                    member.setId(rs.getString("id_member"));
+                    member.setLastName(rs.getString("last_name"));
+                    member.setFirstName(rs.getString("first_names"));
+                    tx.setMemberDebited(member);
+                    transactions.add(tx);
+                }
+            }
+        }
+        return transactions;
     }
 }

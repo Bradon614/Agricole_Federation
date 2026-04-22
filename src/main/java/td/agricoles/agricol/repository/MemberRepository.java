@@ -8,6 +8,7 @@ import td.agricoles.agricol.dto.response.Member;
 import td.agricoles.agricol.dto.response.MemberPayment;
 import td.agricoles.agricol.exception.NotFoundException;
 
+
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -190,7 +191,7 @@ public class MemberRepository {
         }
     }
 
-    private Member mapRowToMember(ResultSet rs) throws SQLException {
+    private static Member mapRowToMember(ResultSet rs) throws SQLException {
         Member m = new Member();
         m.setId(String.valueOf(rs.getInt("id_member")));
         m.setLastName(rs.getString("last_name"));
