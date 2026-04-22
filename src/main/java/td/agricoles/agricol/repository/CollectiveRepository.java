@@ -58,7 +58,7 @@ public class CollectiveRepository {
                 }
             }
 
-            // 2. Create mandate for current year
+
             int currentYear = LocalDate.now().getYear();
             String mandateSql = """
                 INSERT INTO collective_mandate (id_collective, year, start_date, end_date)

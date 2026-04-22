@@ -1,14 +1,14 @@
 # openapi-java-client
 
-API Fédération Nationale des Collectivités Agricoles
-- API version: 1.1.0
-  - Build date: 2026-04-21T14:28:12.235148+03:00[Indian/Antananarivo]
+Agricultural federation API
+- API version: 0.1.0
+  - Build date: 2026-04-22T09:32:38.366113+03:00[Indian/Antananarivo]
   - Generator version: 7.7.0
 
-API REST pour la gestion de la Fédération de Collectivités Agricoles à Madagascar.
-Version mise à jour le 21 avril 2026 :
-- Nouvelles règles d’admission des membres (B-2)
-- Ajout des statistiques globales de la fédération (H)
+# Versioning
+This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are : 
+- v0.0.1 (2026-04-21) : POST /collectivities for collectivities creation and POST /members for members creation.
+- v0.1.0 (2026-04-22) : PATCH /collectivities/{id}/identifiers for assigning unique number and name to a collective.
 
 
 
@@ -45,7 +45,7 @@ Add this dependency to your project's POM:
 <dependency>
   <groupId>org.openapitools</groupId>
   <artifactId>openapi-java-client</artifactId>
-  <version>1.1.0</version>
+  <version>0.1.0</version>
   <scope>compile</scope>
 </dependency>
 ```
@@ -61,7 +61,7 @@ Add this dependency to your project's build file:
   }
 
   dependencies {
-     implementation "org.openapitools:openapi-java-client:1.1.0"
+     implementation "org.openapitools:openapi-java-client:0.1.0"
   }
 ```
 
@@ -75,7 +75,7 @@ mvn clean package
 
 Then manually install the following JARs:
 
-* `target/openapi-java-client-1.1.0.jar`
+* `target/openapi-java-client-0.1.0.jar`
 * `target/lib/*.jar`
 
 ## Getting Started
@@ -88,25 +88,22 @@ Please follow the [installation](#installation) instruction and execute the foll
 import org.openapitools.client.ApiClient;
 import org.openapitools.client.ApiException;
 import org.openapitools.client.Configuration;
-import org.openapitools.client.auth.*;
 import org.openapitools.client.models.*;
-import org.openapitools.client.api.ACollectivitsApi;
+import org.openapitools.client.api.DefaultApi;
 
 public class Example {
   public static void main(String[] args) {
     ApiClient defaultClient = Configuration.getDefaultApiClient();
-    defaultClient.setBasePath("https://api.federation-agricole.mg/v1");
-    
-    // Configure HTTP bearer authorization: BearerAuth
-    HttpBearerAuth BearerAuth = (HttpBearerAuth) defaultClient.getAuthentication("BearerAuth");
-    BearerAuth.setBearerToken("BEARER TOKEN");
+    defaultClient.setBasePath("https://localhost:8080");
 
-    ACollectivitsApi apiInstance = new ACollectivitsApi(defaultClient);
-    Integer idCollectivite = 56; // Integer | 
+    DefaultApi apiInstance = new DefaultApi(defaultClient);
+    String id = "id_example"; // String | The internal ID of the collective (returned at creation)
+    CollectiveIdentifiersAssignment collectiveIdentifiersAssignment = new CollectiveIdentifiersAssignment(); // CollectiveIdentifiersAssignment | 
     try {
-      apiInstance.autoriserCollectivite(idCollectivite);
+      Collectivity result = apiInstance.collectivitiesIdIdentifiersPatch(id, collectiveIdentifiersAssignment);
+      System.out.println(result);
     } catch (ApiException e) {
-      System.err.println("Exception when calling ACollectivitsApi#autoriserCollectivite");
+      System.err.println("Exception when calling DefaultApi#collectivitiesIdIdentifiersPatch");
       System.err.println("Status code: " + e.getCode());
       System.err.println("Reason: " + e.getResponseBody());
       System.err.println("Response headers: " + e.getResponseHeaders());
@@ -119,55 +116,33 @@ public class Example {
 
 ## Documentation for API Endpoints
 
-All URIs are relative to *https://api.federation-agricole.mg/v1*
+All URIs are relative to *https://localhost:8080*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*ACollectivitsApi* | [**autoriserCollectivite**](docs/ACollectivitsApi.md#autoriserCollectivite) | **PATCH** /collectivites/{id_collectivite}/autoriser | Autoriser l’ouverture d’une collectivité
-*ACollectivitsApi* | [**createCollectivite**](docs/ACollectivitsApi.md#createCollectivite) | **POST** /collectivites | Créer une nouvelle collectivité (demande d’ouverture)
-*BMembresApi* | [**changerCollectiviteMembre**](docs/BMembresApi.md#changerCollectiviteMembre) | **PATCH** /membres/{id_membre}/changer-collectivite | Changer un membre de collectivité
-*BMembresApi* | [**createMembre**](docs/BMembresApi.md#createMembre) | **POST** /membres | Admettre un nouveau membre (procédure renforcée)
-*BMembresApi* | [**demissionnerMembre**](docs/BMembresApi.md#demissionnerMembre) | **PATCH** /membres/{id_membre}/demissionner | Démissionner un membre
-*CCotisationsApi* | [**createCotisation**](docs/CCotisationsApi.md#createCotisation) | **POST** /cotisations | Enregistrer un paiement de cotisation
-*DTrsorerieApi* | [**createCompte**](docs/DTrsorerieApi.md#createCompte) | **POST** /comptes | Créer un compte (Caisse, Bancaire ou Mobile Money)
-*DTrsorerieApi* | [**getComptesCollectivite**](docs/DTrsorerieApi.md#getComptesCollectivite) | **GET** /collectivites/{id_collectivite}/comptes | Lister les comptes d’une collectivité
-*EActivitsApi* | [**createActivite**](docs/EActivitsApi.md#createActivite) | **POST** /activites | Créer une activité
-*FAssiduitApi* | [**enregistrerPresences**](docs/FAssiduitApi.md#enregistrerPresences) | **POST** /presences | Enregistrer les présences à une activité
-*GStatistiquesCollectivitApi* | [**getRapportMensuelCollectivite**](docs/GStatistiquesCollectivitApi.md#getRapportMensuelCollectivite) | **GET** /collectivites/{id_collectivite}/statistiques/mensuelles | Rapport mensuel d’une collectivité
-*HStatistiquesFdrationApi* | [**getRapportFederation**](docs/HStatistiquesFdrationApi.md#getRapportFederation) | **GET** /federation/statistiques | Rapport global mensuel ou annuel de la fédération
+*DefaultApi* | [**collectivitiesIdIdentifiersPatch**](docs/DefaultApi.md#collectivitiesIdIdentifiersPatch) | **PATCH** /collectivities/{id}/identifiers | Assign unique number and name to a collective
+*DefaultApi* | [**collectivitiesPost**](docs/DefaultApi.md#collectivitiesPost) | **POST** /collectivities | Create list of collectivities
+*DefaultApi* | [**membersPost**](docs/DefaultApi.md#membersPost) | **POST** /members | Create list of members
 
 
 ## Documentation for Models
 
- - [ActiviteCreationRequest](docs/ActiviteCreationRequest.md)
- - [ChangerCollectiviteMembreRequest](docs/ChangerCollectiviteMembreRequest.md)
- - [Collectivite](docs/Collectivite.md)
- - [CollectiviteCreationRequest](docs/CollectiviteCreationRequest.md)
- - [CompteCreationRequest](docs/CompteCreationRequest.md)
- - [CompteDetaille](docs/CompteDetaille.md)
- - [Cotisation](docs/Cotisation.md)
- - [CotisationRequest](docs/CotisationRequest.md)
- - [Membre](docs/Membre.md)
- - [MembreCreationRequest](docs/MembreCreationRequest.md)
- - [MembreCreationRequestCotisationAnnuelle](docs/MembreCreationRequestCotisationAnnuelle.md)
- - [ParrainInfo](docs/ParrainInfo.md)
- - [PresenceBulkRequest](docs/PresenceBulkRequest.md)
- - [PresenceBulkRequestPresencesInner](docs/PresenceBulkRequestPresencesInner.md)
- - [RapportFederation](docs/RapportFederation.md)
- - [RapportFederationTotauxGeneraux](docs/RapportFederationTotauxGeneraux.md)
- - [RapportMensuelCollectivite](docs/RapportMensuelCollectivite.md)
- - [StatistiqueCollectiviteFederation](docs/StatistiqueCollectiviteFederation.md)
+ - [CollectiveIdentifiersAssignment](docs/CollectiveIdentifiersAssignment.md)
+ - [Collectivity](docs/Collectivity.md)
+ - [CollectivityStructure](docs/CollectivityStructure.md)
+ - [CreateCollectivity](docs/CreateCollectivity.md)
+ - [CreateCollectivityStructure](docs/CreateCollectivityStructure.md)
+ - [CreateMember](docs/CreateMember.md)
+ - [Gender](docs/Gender.md)
+ - [Member](docs/Member.md)
+ - [MemberInformation](docs/MemberInformation.md)
+ - [MemberOccupation](docs/MemberOccupation.md)
 
 
 <a id="documentation-for-authorization"></a>
 ## Documentation for Authorization
 
-
-Authentication schemes defined for the API:
-<a id="BearerAuth"></a>
-### BearerAuth
-
-- **Type**: HTTP Bearer Token authentication (JWT)
+Endpoints do not require authorization.
 
 
 ## Recommendation

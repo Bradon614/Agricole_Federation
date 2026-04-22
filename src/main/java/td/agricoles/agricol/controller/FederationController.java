@@ -4,15 +4,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import td.agricoles.agricol.dto.request.CollectiveIdentifiersAssignment;
+import td.agricoles.agricol.dto.request.CreateMemberPayment;
 import td.agricoles.agricol.dto.response.Collectivity;
 import td.agricoles.agricol.dto.request.CreateCollectivity;
 import td.agricoles.agricol.dto.request.CreateMember;
 import td.agricoles.agricol.dto.response.Member;
 import td.agricoles.agricol.Services.CollectiveService;
 import td.agricoles.agricol.Services.MemberService;
+import td.agricoles.agricol.dto.response.MemberPayment;
 import td.agricoles.agricol.exception.BadRequestException;
 import td.agricoles.agricol.exception.NotFoundException;
+import td.agricoles.agricol.repository.MemberRepository;
 
+import java.sql.SQLException;
 import java.util.List;
 
 @RestController
@@ -67,6 +71,80 @@ public class FederationController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             return new ResponseEntity<>("Internal server error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @GetMapping("/collectivities/{id}/membershipFees")
+    public ResponseEntity<?> getMembershipFees(@PathVariable String id) {
+        try {
+            List<MembershipFee> fees = collectiveRepository.findMembershipFeesByCollectiveId(id);
+            return ResponseEntity.ok(fees);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (SQLException e) {
+            return new ResponseEntity<>("Database error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/collectivities/{id}/membershipFees")
+    public ResponseEntity<?> createMembershipFees(@PathVariable String id,
+                                                  @RequestBody List<CreateMembershipFee> fees) {
+        try {
+            if (!collectiveRepository.exists(id)) {
+                throw new NotFoundException("Collectivity not found");
+            }
+            // Validation: frequency valide, amount > 0
+            for (CreateMembershipFee fee : fees) {
+                if (fee.getAmount() <= 0) {
+                    throw new BadRequestException("Amount must be positive");
+                }
+            }
+            List<MembershipFee> created = collectiveRepository.saveMembershipFees(id, fees);
+            return ResponseEntity.ok(created);
+        } catch (BadRequestException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (SQLException e) {
+            return new ResponseEntity<>("Database error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/collectivities/{id}/transactions")
+    public ResponseEntity<?> getTransactions(@PathVariable String id,
+                                             @RequestParam LocalDate from,
+                                             @RequestParam LocalDate to) {
+        try {
+            if (from.isAfter(to)) {
+                throw new BadRequestException("'from' date must be before 'to' date");
+            }
+            List<CollectivityTransaction> transactions =
+                    collectiveRepository.findTransactionsByCollectiveIdAndPeriod(id, from, to);
+            return ResponseEntity.ok(transactions);
+        } catch (BadRequestException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (SQLException e) {
+            return new ResponseEntity<>("Database error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/members/{id}/payments")
+    public ResponseEntity<?> createPayments(@PathVariable String id,
+                                            @RequestBody List<CreateMemberPayment> payments) {
+        try {
+            // Vérifier que le membre existe
+            if (MemberRepository.findById(id) == null) {
+                throw new NotFoundException("Member not found");
+            }
+            List<MemberPayment> created = MemberRepository.savePayments(id, payments);
+            return new ResponseEntity<>(created, HttpStatus.CREATED);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (SQLException e) {
+            return new ResponseEntity<>("Database error", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

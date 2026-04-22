@@ -3,7 +3,9 @@ package td.agricoles.agricol.repository;
 import td.agricoles.agricol.config.DatabaseConfig;
 import td.agricoles.agricol.dto.enums.Gender;
 import td.agricoles.agricol.dto.request.CreateMember;
+import td.agricoles.agricol.dto.request.CreateMemberPayment;
 import td.agricoles.agricol.dto.response.Member;
+import td.agricoles.agricol.dto.response.MemberPayment;
 import td.agricoles.agricol.exception.NotFoundException;
 
 import java.sql.*;
@@ -13,7 +15,7 @@ import java.util.List;
 
 public class MemberRepository {
 
-    public Member findById(String id) throws SQLException {
+    public static Member findById(String id) throws SQLException {
         String sql = """
             SELECT id_member, last_name, first_names, birth_date, gender, address, profession, phone, email,
                    adhesion_date, current_collective_id
@@ -136,8 +138,7 @@ public class MemberRepository {
                 }
             }
 
-            // 4. Record payments
-            // Admission fee 50,000 MGA (OneTime)
+
             String feeSql = """
                 INSERT INTO contribution (id_member, id_collective, contribution_type, amount,
                                           payment_date, payment_method, period)
@@ -150,8 +151,8 @@ public class MemberRepository {
                 stmt.executeUpdate();
             }
 
-            // Annual contribution: amount should be retrieved dynamically (here fixed 200000)
-            double annualAmount = 200000.0; // Adapt according to collective
+
+            double annualAmount = 200000.0;
             String annualSql = """
                 INSERT INTO contribution (id_member, id_collective, contribution_type, amount,
                                           payment_date, payment_method, period)
@@ -167,7 +168,7 @@ public class MemberRepository {
 
             conn.commit();
 
-            // Build response object
+
             Member member = new Member();
             member.setId(String.valueOf(newId));
             member.setFirstName(createMember.getFirstName());
@@ -201,7 +202,64 @@ public class MemberRepository {
         m.setProfession(rs.getString("profession"));
         m.setPhoneNumber(rs.getLong("phone"));
         m.setEmail(rs.getString("email"));
-        // occupation not mapped here, add if needed
+
         return m;
+    }
+
+
+
+    public List<MemberPayment> savePayments(String memberId, List<CreateMemberPayment> payments) throws SQLException {
+        List<MemberPayment> result = new ArrayList<>();
+        String sql = """
+        INSERT INTO member_payment (id_member, amount, id_membership_fee, id_account_credited, payment_mode, creation_date)
+        VALUES (?, ?, ?, ?, ?, ?)
+        RETURNING id_payment
+    """;
+        String transactionSql = """
+        INSERT INTO transaction (id_collective, id_account_credited, id_member_debited, amount, payment_mode, creation_date)
+        SELECT a.id_collective, ?, ?, ?, ?, ?
+        FROM account a WHERE a.id_account = ?
+    """;
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement stmt = conn.prepareStatement(sql);
+                 PreparedStatement txStmt = conn.prepareStatement(transactionSql)) {
+                for (CreateMemberPayment payment : payments) {
+                    LocalDate now = LocalDate.now();
+                    stmt.setInt(1, Integer.parseInt(memberId));
+                    stmt.setInt(2, payment.getAmount());
+                    stmt.setInt(3, Integer.parseInt(payment.getMembershipFeeIdentifier()));
+                    stmt.setInt(4, Integer.parseInt(payment.getAccountCreditedIdentifier()));
+                    stmt.setString(5, payment.getPaymentMode().name());
+                    stmt.setDate(6, Date.valueOf(now));
+                    ResultSet rs = stmt.executeQuery();
+                    if (rs.next()) {
+                        String paymentId = rs.getString(1);
+
+                        txStmt.setInt(1, Integer.parseInt(payment.getAccountCreditedIdentifier()));
+                        txStmt.setInt(2, Integer.parseInt(memberId));
+                        txStmt.setInt(3, payment.getAmount());
+                        txStmt.setString(4, payment.getPaymentMode().name());
+                        txStmt.setDate(5, Date.valueOf(now));
+                        txStmt.setInt(6, Integer.parseInt(payment.getAccountCreditedIdentifier()));
+                        txStmt.executeUpdate();
+
+                        MemberPayment mp = new MemberPayment();
+                        mp.setId(paymentId);
+                        mp.setAmount(payment.getAmount());
+                        mp.setPaymentMode(payment.getPaymentMode());
+                        mp.setCreationDate(now);
+                        result.add(mp);
+                    }
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+        return result;
     }
 }
