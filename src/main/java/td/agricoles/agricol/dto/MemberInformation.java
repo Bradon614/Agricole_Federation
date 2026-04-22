@@ -1,12 +1,17 @@
-package td.agricoles.agricol.DTOs;
+package td.agricoles.agricol.dto;
+
+import td.agricoles.agricol.dto.enums.Gender;
+import td.agricoles.agricol.dto.enums.MemberOccupation;
 
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-
 public class MemberInformation {
     private String firstName;
     private String lastName;
@@ -14,7 +19,7 @@ public class MemberInformation {
     private Gender gender;
     private String address;
     private String profession;
-    private String phoneNumber;        // String au lieu de int pour éviter les problèmes
+    private Long phoneNumber;
     private String email;
     private MemberOccupation occupation;
 }
