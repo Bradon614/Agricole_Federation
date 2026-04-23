@@ -116,7 +116,7 @@ public class CollectiveService {
         }
     }
 
-    // Dans CollectiveService.java
+
 
     public Collectivity getCollectivityById(String id) {
         try {

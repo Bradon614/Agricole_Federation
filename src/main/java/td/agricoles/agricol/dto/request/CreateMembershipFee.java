@@ -4,6 +4,7 @@ import jdk.jfr.Frequency;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import td.agricoles.agricol.dto.enums.FeeFrequency;
 
 import java.time.LocalDate;
 
@@ -12,7 +13,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class CreateMembershipFee {
     private LocalDate eligibleFrom;
-    private Frequency frequency;
+    private FeeFrequency frequency;
     private Double amount;
     private String label;
 }

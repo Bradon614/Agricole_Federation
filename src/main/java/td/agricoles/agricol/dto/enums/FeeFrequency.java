@@ -1,5 +1,5 @@
 package td.agricoles.agricol.dto.enums;
 
-public enum Frequency {
+public enum FeeFrequency {
     WEEKLY, MONTHLY, ANNUALLY, PUNCTUALLY
 }

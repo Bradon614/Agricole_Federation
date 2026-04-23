@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CollectivityInformation {
+    private String number;
     private String name;
-    private Integer number;
 }

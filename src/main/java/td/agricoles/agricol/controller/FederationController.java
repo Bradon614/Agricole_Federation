@@ -91,7 +91,7 @@ public class FederationController {
             if (!CollectiveRepository.exists(id)) {
                 throw new NotFoundException("Collectivity not found");
             }
-            // Validation: frequency valide, amount > 0
+
             for (CreateMembershipFee fee : fees) {
                 if (fee.getAmount() <= 0) {
                     throw new BadRequestException("Amount must be positive");
@@ -132,7 +132,7 @@ public class FederationController {
     public ResponseEntity<?> createPayments(@PathVariable String id,
                                             @RequestBody List<CreateMemberPayment> payments) {
         try {
-            // Vérifier que le membre existe
+
             if (MemberRepository.findById(id) == null) {
                 throw new NotFoundException("Member not found");
             }
