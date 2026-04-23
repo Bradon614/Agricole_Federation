@@ -7,6 +7,7 @@ import td.agricoles.agricol.dto.request.CreateCollectivity;
 import td.agricoles.agricol.dto.request.CreateCollectivityStructure;
 import td.agricoles.agricol.dto.response.Collectivity;
 import td.agricoles.agricol.dto.response.CollectivityStructure;
+import td.agricoles.agricol.dto.response.FinancialAccount;
 import td.agricoles.agricol.dto.response.Member;
 import td.agricoles.agricol.exception.BadRequestException;
 import td.agricoles.agricol.exception.NotFoundException;
@@ -58,7 +59,7 @@ public class CollectiveService {
             throw new BadRequestException("All four specific posts must be assigned");
         }
 
-        List<String> memberIds = create.getMembers().stream().map(m -> m.getId()).toList();
+        List<String> memberIds = create.getMembers(); // <-- CORRECTION ICI
         if (memberIds.size() < 10) {
             throw new BadRequestException("At least 10 members required");
         }
@@ -112,6 +113,31 @@ public class CollectiveService {
 
         } catch (SQLException e) {
             throw new RuntimeException("Database error while assigning identifiers", e);
+        }
+    }
+
+    // Dans CollectiveService.java
+
+    public Collectivity getCollectivityById(String id) {
+        try {
+            Collectivity coll = collectiveRepository.findByIdFull(id);
+            if (coll == null) {
+                throw new NotFoundException("Collectivity not found: " + id);
+            }
+            return coll;
+        } catch (SQLException e) {
+            throw new RuntimeException("Database error while fetching collectivity", e);
+        }
+    }
+
+    public List<FinancialAccount> getFinancialAccounts(String collectiveId, LocalDate at) {
+        try {
+            if (!collectiveRepository.exists(collectiveId)) {
+                throw new NotFoundException("Collectivity not found: " + collectiveId);
+            }
+            return collectiveRepository.findFinancialAccounts(collectiveId, at);
+        } catch (SQLException e) {
+            throw new RuntimeException("Database error while fetching accounts", e);
         }
     }
 

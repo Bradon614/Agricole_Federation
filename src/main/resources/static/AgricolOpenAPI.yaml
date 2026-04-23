@@ -4,11 +4,13 @@ info:
   description: |
     # Versioning
     This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are : 
-    - v0.0.1 (2026-04-21) : POST /collectivities for collectivities creation and POST /members for members creation.
-    - v0.1.0 (2026-04-22) : PATCH /collectivities/{id}/identifiers for assigning unique number and name to a collective.
-  version: 0.1.0
+    - v0.0.1 (2026-04-21) : POST /collectivities, POST /members
+    - v0.1.0 (2026-04-22) : PATCH /collectivities/{id}/identifiers
+    - v0.2.0 (2026-04-23) : GET /collectivities/{id}, GET /collectivities/{id}/financialAccounts
+  version: 0.2.0
 servers:
   - url: 'https://localhost:8080'
+
 paths:
   '/collectivities':
     post:
@@ -37,21 +39,36 @@ paths:
         404:
           description: Member not found.
 
-  '/collectivities/{id}/identifiers':
-    patch:
-      summary: Assign unique number and name to a collective
-      description: |
-        This endpoint allows the federation to assign a **unique number** and **unique name** to an existing collective.
-        - Once assigned, these values **cannot be changed**.
-        - The number and name must be unique across all collectivities.
-        - If the collective already has a number or name, the request will be rejected.
+  '/collectivities/{id}':
+    get:
+      summary: Get a specific collectivity by ID
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
-          description: The internal ID of the collective (returned at creation)
+      responses:
+        200:
+          description: The requested collectivity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collectivity'
+        404:
+          description: Collectivity not found.
+
+  '/collectivities/{id}/identifiers':
+    patch:
+      summary: Assign unique number and name to a collective
+      description: |
+        Once assigned, these values cannot be changed. Number and name must be unique.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -60,19 +77,43 @@ paths:
               $ref: '#/components/schemas/CollectiveIdentifiersAssignment'
       responses:
         200:
-          description: Identifiers successfully assigned. Returns the updated collective.
+          description: Identifiers successfully assigned.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Collectivity'
         400:
-          description: |
-            Bad request. Possible reasons:
-            - Number or name already exists.
-            - Collective already has a number/name assigned.
-            - Invalid format.
+          description: Number/name already exists or already assigned.
         404:
           description: Collective not found.
+
+  '/collectivities/{id}/financialAccounts':
+    get:
+      summary: Get financial accounts of a collectivity at a given date
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: at
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date at which to retrieve account balances
+      responses:
+        200:
+          description: List of financial accounts with balance at given date
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FinancialAccount'
+        404:
+          description: Collectivity not found.
 
   '/members':
     post:
@@ -94,15 +135,17 @@ paths:
                 items:
                   $ref: '#/components/schemas/Member'
         400:
-          description: |
-            The following case must return a bad request exception : 
-            - Member with bad referees or without proper payment.
-            - Membership dues not paid or registration fee not paid.
+          description: Bad referees or missing payments.
         404:
-          description: Either collectivity or member not found.
+          description: Collectivity or member not found.
 
 components:
   schemas:
+    # ----- Basic identifiers -----
+    MemberIdentifier:
+      type: string
+
+    # ----- Collectivity creation -----
     CreateCollectivity:
       type: object
       properties:
@@ -129,6 +172,25 @@ components:
         secretary:
           $ref: '#/components/schemas/MemberIdentifier'
 
+    # ----- Collectivity response -----
+    Collectivity:
+      type: object
+      properties:
+        id:
+          type: string
+        number:
+          type: string
+        name:
+          type: string
+        location:
+          type: string
+        structure:
+          $ref: '#/components/schemas/CollectivityStructure'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+
     CollectivityStructure:
       type: object
       properties:
@@ -141,44 +203,16 @@ components:
         secretary:
           $ref: '#/components/schemas/Member'
 
-    Collectivity:
-      type: object
-      properties:
-        id:
-          type: string
-        number:
-          type: string
-          description: Unique number assigned by the federation (once set, immutable)
-        name:
-          type: string
-          description: Unique name assigned by the federation (once set, immutable)
-        location:
-          type: string
-        structure:
-          $ref: '#/components/schemas/CollectivityStructure'
-        members:
-          type: array
-          items:
-            $ref: '#/components/schemas/Member'
-
     CollectiveIdentifiersAssignment:
       type: object
-      required:
-        - number
-        - name
+      required: [number, name]
       properties:
         number:
           type: string
-          description: The unique number to assign
-          example: "FED-2026-042"
         name:
           type: string
-          description: The unique name to assign
-          example: "Collectivité des Riziculteurs d'Antsirabe"
 
-    MemberIdentifier:
-      type: string
-
+    # ----- Member creation & response -----
     CreateMember:
       type: object
       allOf:
@@ -224,8 +258,95 @@ components:
         - $ref: '#/components/schemas/MemberInformation'
       properties:
         id:
-          $ref: '#/components/schemas/MemberIdentifier'
+          type: string
 
+    # ----- Financial Accounts (polymorphic) -----
+    FinancialAccount:
+      oneOf:
+        - $ref: '#/components/schemas/CashAccount'
+        - $ref: '#/components/schemas/MobileBankingAccount'
+        - $ref: '#/components/schemas/BankAccount'
+      discriminator:
+        propertyName: accountType
+        mapping:
+          CASH: '#/components/schemas/CashAccount'
+          MOBILE_MONEY: '#/components/schemas/MobileBankingAccount'
+          BANK: '#/components/schemas/BankAccount'
+
+    CashAccount:
+      type: object
+      properties:
+        id:
+          type: string
+        accountType:
+          type: string
+          enum: [CASH]
+        amount:
+          type: integer
+
+    MobileBankingAccount:
+      type: object
+      properties:
+        id:
+          type: string
+        accountType:
+          type: string
+          enum: [MOBILE_MONEY]
+        holderName:
+          type: string
+        mobileBankingService:
+          $ref: '#/components/schemas/MobileBankingService'
+        mobileNumber:
+          type: integer
+        amount:
+          type: number
+          format: double
+
+    BankAccount:
+      type: object
+      properties:
+        id:
+          type: string
+        accountType:
+          type: string
+          enum: [BANK]
+        holderName:
+          type: string
+        bankName:
+          $ref: '#/components/schemas/Bank'
+        bankCode:
+          type: integer
+        bankBranchCode:
+          type: integer
+        bankAccountNumber:
+          type: integer
+        bankAccountKey:
+          type: integer
+        amount:
+          type: number
+          format: double
+
+    MobileBankingService:
+      type: string
+      enum:
+        - AIRTEL_MONEY
+        - MVOLA
+        - ORANGE_MONEY
+
+    Bank:
+      type: string
+      enum:
+        - BRED
+        - MCB
+        - BMOI
+        - BOA
+        - BGFI
+        - AFG
+        - ACCES_BANQUE
+        - BAOBAB
+        - SIPEM
+
+    # ----- Enums -----
     Gender:
       type: string
       enum:

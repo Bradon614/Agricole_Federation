@@ -144,4 +144,29 @@ public class FederationController {
             return new ResponseEntity<>("Database error", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/collectivities/{id}")
+    public ResponseEntity<?> getCollectivity(@PathVariable String id) {
+        try {
+            Collectivity coll = collectiveService.getCollectivityById(id);
+            return ResponseEntity.ok(coll);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/collectivities/{id}/financialAccounts")
+    public ResponseEntity<?> getFinancialAccounts(@PathVariable String id,
+                                                  @RequestParam LocalDate at) {
+        try {
+            List<FinancialAccount> accounts = collectiveService.getFinancialAccounts(id, at);
+            return ResponseEntity.ok(accounts);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

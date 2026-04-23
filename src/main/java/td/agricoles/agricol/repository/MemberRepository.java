@@ -191,7 +191,7 @@ public class MemberRepository {
         }
     }
 
-    private static Member mapRowToMember(ResultSet rs) throws SQLException {
+    public static Member mapRowToMember(ResultSet rs) throws SQLException {
         Member m = new Member();
         m.setId(String.valueOf(rs.getInt("id_member")));
         m.setLastName(rs.getString("last_name"));

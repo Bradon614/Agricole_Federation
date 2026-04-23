@@ -14,31 +14,32 @@ public class AgricolApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(AgricolApplication.class, args);
+        System.out.println("DB Connection OK: " + CollectiveRepository.testConnection());
     }
 
-//    @Bean
-//    public MemberRepository memberRepository() {
-//        return new MemberRepository();
-//    }
-//
-//    @Bean
-//    public CollectiveRepository collectiveRepository() {
-//        return new CollectiveRepository();
-//    }
-//
-//    @Bean
-//    public CollectiveService collectiveService() {
-//        return new CollectiveService(collectiveRepository(), memberRepository());
-//    }
-//
-//    @Bean
-//    public MemberService memberService() {
-//        return new MemberService(memberRepository(), collectiveRepository());
-//    }
-//
-//    @Bean
-//    public FederationController federationController() {
-//        return new FederationController(collectiveService(), memberService());
-//    }
+    @Bean
+    public MemberRepository memberRepository() {
+        return new MemberRepository();
+    }
+
+    @Bean
+    public CollectiveRepository collectiveRepository() {
+        return new CollectiveRepository();
+    }
+
+    @Bean
+    public CollectiveService collectiveService() {
+        return new CollectiveService(collectiveRepository(), memberRepository());
+    }
+
+    @Bean
+    public MemberService memberService() {
+        return new MemberService(memberRepository(), collectiveRepository());
+    }
+
+    @Bean
+    public FederationController federationController() {
+        return new FederationController(collectiveService(), memberService());
+    }
 
 }
