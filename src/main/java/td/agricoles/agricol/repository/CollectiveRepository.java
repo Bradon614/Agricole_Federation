@@ -53,14 +53,16 @@ public class CollectiveRepository {
 
 
             int currentYear = LocalDate.now().getYear();
-            String mandateSql = "INSERT INTO collective_mandate (id_collective, year, start_date, end_date) VALUES (?, ?, ?, ?)";
+            String mandateId = "man-" + java.util.UUID.randomUUID().toString().substring(0, 8);
+            String mandateSql = "INSERT INTO collective_mandate (id_mandate, id_collective, year, start_date, end_date) VALUES (?, ?, ?, ?, ?)";
             try (PreparedStatement stmt = conn.prepareStatement(mandateSql)) {
                 LocalDate debut = LocalDate.of(currentYear, 1, 1);
                 LocalDate fin = debut.plusYears(1);
-                stmt.setString(1, newId);
-                stmt.setInt(2, currentYear);
-                stmt.setDate(3, Date.valueOf(debut));
-                stmt.setDate(4, Date.valueOf(fin));
+                stmt.setString(1, mandateId);
+                stmt.setString(2, newId);
+                stmt.setInt(3, currentYear);
+                stmt.setDate(4, Date.valueOf(debut));
+                stmt.setDate(5, Date.valueOf(fin));
                 stmt.executeUpdate();
             }
 
@@ -82,10 +84,10 @@ public class CollectiveRepository {
             }
 
 
-            assignPosition(conn, newId, create.getStructure().getPresident(), "President");
-            assignPosition(conn, newId, create.getStructure().getVicePresident(), "Vice President");
-            assignPosition(conn, newId, create.getStructure().getTreasurer(), "Treasurer");
-            assignPosition(conn, newId, create.getStructure().getSecretary(), "Secretary");
+            assignPosition(conn, newId, create.getStructure().getPresident(), "PRESIDENT");
+            assignPosition(conn, newId, create.getStructure().getVicePresident(), "VICE_PRESIDENT");
+            assignPosition(conn, newId, create.getStructure().getTreasurer(), "TREASURER");
+            assignPosition(conn, newId, create.getStructure().getSecretary(), "SECRETARY");
 
             conn.commit();
 
@@ -364,7 +366,7 @@ public class CollectiveRepository {
             JOIN member m ON cpo.id_member = m.id_member
             JOIN collective_mandate cm ON cpo.id_mandate = cm.id_mandate
             WHERE cm.id_collective = ? AND cm.start_date <= CURRENT_DATE AND cm.end_date >= CURRENT_DATE
-              AND p.label IN ('President', 'Vice President', 'Treasurer', 'Secretary')
+              AND p.label IN ('PRESIDENT', 'VICE_PRESIDENT', 'TREASURER', 'SECRETARY')
         """;
         CollectivityStructure struct = new CollectivityStructure();
         try (Connection conn = DatabaseConfig.getConnection();
@@ -434,7 +436,7 @@ public class CollectiveRepository {
                         case "Cash" -> {
                             CashAccount ca = new CashAccount();
                             ca.setId(id);
-                            ca.setAmount(rs.getInt("balance")); // balance initiale (on la remplacera après calcul)
+                            ca.setAmount(rs.getInt("balance"));
                             yield ca;
                         }
                         case "MobileMoney" -> {
@@ -445,7 +447,7 @@ public class CollectiveRepository {
                                     MobileBankingService.valueOf(rs.getString("operator"))
                             );
                             mma.setMobileNumber(rs.getInt("phone_number"));
-                            mma.setAmount(rs.getDouble("balance")); // balance initiale
+                            mma.setAmount(rs.getDouble("balance"));
                             yield mma;
                         }
                         default -> throw new SQLException("Unknown account type: " + type);

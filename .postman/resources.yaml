@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: 0409657c-cb35-4223-853d-55b212507c5b
+
+localResources:
+  specs:
+    - ../src/main/resources/static/AgricolOpenAPI.yaml
