@@ -381,10 +381,10 @@ public class CollectiveRepository {
                     m.setFirstName(rs.getString("first_names"));
                     m.setEmail(rs.getString("email"));
                     switch (label) {
-                        case "President" -> struct.setPresident(m);
-                        case "Vice President" -> struct.setVicePresident(m);
-                        case "Treasurer" -> struct.setTreasurer(m);
-                        case "Secretary" -> struct.setSecretary(m);
+                        case "PRESIDENT" -> struct.setPresident(m);
+                        case "VICE_PRESIDENT" -> struct.setVicePresident(m);
+                        case "TREASURER" -> struct.setTreasurer(m);
+                        case "SECRETARY" -> struct.setSecretary(m);
                     }
                 }
             }
