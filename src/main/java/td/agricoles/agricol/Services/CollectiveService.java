@@ -5,10 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import td.agricoles.agricol.dto.request.CreateCollectivity;
 import td.agricoles.agricol.dto.request.CreateCollectivityStructure;
-import td.agricoles.agricol.dto.response.Collectivity;
-import td.agricoles.agricol.dto.response.CollectivityStructure;
-import td.agricoles.agricol.dto.response.FinancialAccount;
-import td.agricoles.agricol.dto.response.Member;
+import td.agricoles.agricol.dto.response.*;
 import td.agricoles.agricol.exception.BadRequestException;
 import td.agricoles.agricol.exception.NotFoundException;
 import td.agricoles.agricol.repository.CollectiveRepository;
@@ -138,6 +135,25 @@ public class CollectiveService {
             return collectiveRepository.findFinancialAccounts(collectiveId, at);
         } catch (SQLException e) {
             throw new RuntimeException("Database error while fetching accounts", e);
+        }
+    }
+
+    public List<CollectivityLocalStatistics> getLocalStatistics(String collectiveId, LocalDate from, LocalDate to) {
+        try {
+            if (!collectiveRepository.exists(collectiveId)) {
+                throw new NotFoundException("Collectivity not found: " + collectiveId);
+            }
+            return collectiveRepository.getLocalStatistics(collectiveId, from, to);
+        } catch (SQLException e) {
+            throw new RuntimeException("Database error while computing local statistics", e);
+        }
+    }
+
+    public List<CollectivityOverallStatistics> getOverallStatistics(LocalDate from, LocalDate to) {
+        try {
+            return collectiveRepository.getOverallStatistics(from, to);
+        } catch (SQLException e) {
+            throw new RuntimeException("Database error while computing overall statistics", e);
         }
     }
 

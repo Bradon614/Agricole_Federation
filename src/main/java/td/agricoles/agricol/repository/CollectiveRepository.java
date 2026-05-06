@@ -16,6 +16,17 @@ public class CollectiveRepository {
 
     private final MemberRepository memberRepository = new MemberRepository();
 
+    private static class FeeInfo {
+        String id;
+        double amount;
+        FeeInfo(String id, double amount) { this.id = id; this.amount = amount; }
+    }
+
+    private static class CollInfo {
+        String id, number, name;
+        CollInfo(String id, String number, String name) { this.id = id; this.number = number; this.name = name; }
+    }
+
     public static boolean exists(String collectiveId) throws SQLException {
         String sql = "SELECT 1 FROM collective WHERE id_collective = ?";
         try (Connection conn = DatabaseConfig.getConnection();
@@ -494,6 +505,152 @@ public class CollectiveRepository {
 
         return initial + credits;
     }
+
+    public List<CollectivityLocalStatistics> getLocalStatistics(String collectiveId, LocalDate from, LocalDate to) throws SQLException {
+        List<CollectivityLocalStatistics> result = new ArrayList<>();
+
+        
+        List<Member> members = getActiveMembers(collectiveId);
+
+        List<FeeInfo> activeFees = new ArrayList<>();
+        String feeSql = "SELECT id_membership_fee, amount FROM membership_fee WHERE id_collective = ? AND status = 'ACTIVE' AND eligible_from <= ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(feeSql)) {
+            stmt.setString(1, collectiveId);
+            stmt.setDate(2, Date.valueOf(to));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    activeFees.add(new FeeInfo(rs.getString("id_membership_fee"), rs.getDouble("amount")));
+                }
+            }
+        }
+
+        for (Member member : members) {
+            double earnedAmount = 0.0;
+            String earnedSql = "SELECT COALESCE(SUM(amount),0) FROM member_payment WHERE id_member = ? AND creation_date BETWEEN ? AND ?";
+            try (Connection conn = DatabaseConfig.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(earnedSql)) {
+                stmt.setString(1, member.getId());
+                stmt.setDate(2, Date.valueOf(from));
+                stmt.setDate(3, Date.valueOf(to));
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        earnedAmount = rs.getDouble(1);
+                    }
+                }
+            }
+
+            double unpaidAmount = 0.0;
+            for (FeeInfo fee : activeFees) {
+                String paidSql = "SELECT COALESCE(SUM(amount),0) FROM member_payment WHERE id_member = ? AND id_membership_fee = ? AND creation_date BETWEEN ? AND ?";
+                double paidForFee = 0.0;
+                try (Connection conn = DatabaseConfig.getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(paidSql)) {
+                    stmt.setString(1, member.getId());
+                    stmt.setString(2, fee.id);
+                    stmt.setDate(3, Date.valueOf(from));
+                    stmt.setDate(4, Date.valueOf(to));
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            paidForFee = rs.getDouble(1);
+                        }
+                    }
+                }
+                unpaidAmount += Math.max(0, fee.amount - paidForFee);
+            }
+
+            MemberDescription desc = new MemberDescription(
+                    member.getId(),
+                    member.getFirstName(),
+                    member.getLastName(),
+                    member.getEmail(),
+                    member.getOccupation() != null ? member.getOccupation().name() : null
+            );
+            result.add(new CollectivityLocalStatistics(desc, earnedAmount, unpaidAmount));
+        }
+        return result;
+    }
+
+    public List<CollectivityOverallStatistics> getOverallStatistics(LocalDate from, LocalDate to) throws SQLException {
+        List<CollectivityOverallStatistics> result = new ArrayList<>();
+
+        String collSql = "SELECT id_collective, unique_number, unique_name FROM collective";
+        List<CollInfo> collectivities = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(collSql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                collectivities.add(new CollInfo(
+                        rs.getString("id_collective"),
+                        rs.getString("unique_number"),
+                        rs.getString("unique_name")
+                ));
+            }
+        }
+
+        for (CollInfo coll : collectivities) {
+            List<Member> activeMembers = getActiveMembers(coll.id);
+            int totalActive = activeMembers.size();
+
+            List<FeeInfo> activeFees = new ArrayList<>();
+            String feeSql = "SELECT id_membership_fee, amount FROM membership_fee WHERE id_collective = ? AND status = 'ACTIVE' AND eligible_from <= ?";
+            try (Connection conn = DatabaseConfig.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(feeSql)) {
+                stmt.setString(1, coll.id);
+                stmt.setDate(2, Date.valueOf(to));
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        activeFees.add(new FeeInfo(rs.getString("id_membership_fee"), rs.getDouble("amount")));
+                    }
+                }
+            }
+
+            int upToDateCount = 0;
+            if (totalActive > 0 && !activeFees.isEmpty()) {
+                for (Member member : activeMembers) {
+                    boolean allPaid = true;
+                    for (FeeInfo fee : activeFees) {
+                        String paySql = "SELECT COALESCE(SUM(amount),0) FROM member_payment WHERE id_member = ? AND id_membership_fee = ? AND creation_date BETWEEN ? AND ?";
+                        double paid = 0.0;
+                        try (Connection conn = DatabaseConfig.getConnection();
+                             PreparedStatement stmt = conn.prepareStatement(paySql)) {
+                            stmt.setString(1, member.getId());
+                            stmt.setString(2, fee.id);
+                            stmt.setDate(3, Date.valueOf(from));
+                            stmt.setDate(4, Date.valueOf(to));
+                            try (ResultSet rs = stmt.executeQuery()) {
+                                if (rs.next()) paid = rs.getDouble(1);
+                            }
+                        }
+                        if (paid < fee.amount) { allPaid = false; break; }
+                    }
+                    if (allPaid) upToDateCount++;
+                }
+            }
+
+            double percentage = totalActive > 0 ? (double) upToDateCount / totalActive * 100.0 : 0.0;
+
+            long newAdh = 0;
+            String adhSql = "SELECT COUNT(*) FROM member WHERE current_collective_id = ? AND adhesion_date BETWEEN ? AND ?";
+            try (Connection conn = DatabaseConfig.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(adhSql)) {
+                stmt.setString(1, coll.id);
+                stmt.setDate(2, Date.valueOf(from));
+                stmt.setDate(3, Date.valueOf(to));
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) newAdh = rs.getLong(1);
+                }
+            }
+
+            CollectivityInfo info = new CollectivityInfo(
+                    Integer.parseInt(coll.number != null ? coll.number : "0"),
+                    coll.name
+            );
+            result.add(new CollectivityOverallStatistics(info, (int) newAdh, percentage));
+        }
+        return result;
+    }
+
     public static boolean testConnection() {
         try (Connection conn = DatabaseConfig.getConnection()) {
             return conn != null && !conn.isClosed();
@@ -502,4 +659,6 @@ public class CollectiveRepository {
             return false;
         }
     }
+
+
 }

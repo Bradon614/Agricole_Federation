@@ -169,4 +169,39 @@ public class FederationController {
             return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/collectivities/{id}/statistics")
+    public ResponseEntity<?> getCollectivityLocalStatistics(@PathVariable String id,
+                                                            @RequestParam LocalDate from,
+                                                            @RequestParam LocalDate to) {
+        try {
+            if (from.isAfter(to)) {
+                throw new BadRequestException("'from' date must be before 'to' date");
+            }
+            List<CollectivityLocalStatistics> stats = collectiveService.getLocalStatistics(id, from, to);
+            return ResponseEntity.ok(stats);
+        } catch (BadRequestException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/collectivities/statistics")
+    public ResponseEntity<?> getOverallStatistics(@RequestParam LocalDate from,
+                                                  @RequestParam LocalDate to) {
+        try {
+            if (from.isAfter(to)) {
+                throw new BadRequestException("'from' date must be before 'to' date");
+            }
+            List<CollectivityOverallStatistics> stats = collectiveService.getOverallStatistics(from, to);
+            return ResponseEntity.ok(stats);
+        } catch (BadRequestException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
