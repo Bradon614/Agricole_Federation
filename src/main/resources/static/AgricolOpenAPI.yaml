@@ -6,9 +6,9 @@ info:
     This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are : 
     - v0.0.1 (2026-04-21) : POST /collectivities, POST /members
     - v0.0.2 (2026-04-22) : PATCH /collectivities/{id}/identifiers
-    - v0.0.3 (2026-04-23) : Membership fees, transactions, financial accounts, payments
-    - v0.0.4 (2026-05-06) : Global and local statistics
-  version: 0.0.4
+    - v0.0.4 (2026-04-23) : Membership fees, transactions, financial accounts, payments
+    - v0.0.5 (2026-05-06) : Global and local statistics
+  version: 0.0.5
 servers:
   - url: 'https://localhost:8080'
 

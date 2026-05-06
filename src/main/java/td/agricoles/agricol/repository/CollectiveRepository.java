@@ -16,16 +16,7 @@ public class CollectiveRepository {
 
     private final MemberRepository memberRepository = new MemberRepository();
 
-    private static class FeeInfo {
-        String id;
-        double amount;
-        FeeInfo(String id, double amount) { this.id = id; this.amount = amount; }
-    }
 
-    private static class CollInfo {
-        String id, number, name;
-        CollInfo(String id, String number, String name) { this.id = id; this.number = number; this.name = name; }
-    }
 
     public static boolean exists(String collectiveId) throws SQLException {
         String sql = "SELECT 1 FROM collective WHERE id_collective = ?";
@@ -509,7 +500,6 @@ public class CollectiveRepository {
     public List<CollectivityLocalStatistics> getLocalStatistics(String collectiveId, LocalDate from, LocalDate to) throws SQLException {
         List<CollectivityLocalStatistics> result = new ArrayList<>();
 
-        
         List<Member> members = getActiveMembers(collectiveId);
 
         List<FeeInfo> activeFees = new ArrayList<>();
@@ -559,6 +549,7 @@ public class CollectiveRepository {
                 unpaidAmount += Math.max(0, fee.amount - paidForFee);
             }
 
+
             MemberDescription desc = new MemberDescription(
                     member.getId(),
                     member.getFirstName(),
@@ -573,80 +564,66 @@ public class CollectiveRepository {
 
     public List<CollectivityOverallStatistics> getOverallStatistics(LocalDate from, LocalDate to) throws SQLException {
         List<CollectivityOverallStatistics> result = new ArrayList<>();
-
-        String collSql = "SELECT id_collective, unique_number, unique_name FROM collective";
-        List<CollInfo> collectivities = new ArrayList<>();
+        String sql = """
+        WITH total_fees_per_collective AS (
+            SELECT id_collective, SUM(amount) AS total_fees
+            FROM membership_fee
+            WHERE status = 'ACTIVE' AND eligible_from <= ?
+            GROUP BY id_collective
+        ),
+        member_paid AS (
+            SELECT m.id_member, m.current_collective_id,
+                   COALESCE(SUM(p.amount), 0) AS total_paid
+            FROM member m
+            LEFT JOIN member_payment p ON p.id_member = m.id_member AND p.creation_date BETWEEN ? AND ?
+            WHERE m.status = 'active'
+            GROUP BY m.id_member, m.current_collective_id
+        ),
+        new_adh AS (
+            SELECT current_collective_id, COUNT(*) AS new_count
+            FROM member
+            WHERE adhesion_date BETWEEN ? AND ?
+            GROUP BY current_collective_id
+        )
+        SELECT
+            c.id_collective,
+            c.unique_number,
+            c.unique_name,
+            COUNT(mp.id_member) AS total_active,
+            COALESCE(SUM(
+                CASE WHEN tf.total_fees IS NOT NULL AND mp.total_paid >= tf.total_fees THEN 1 ELSE 0 END
+            ), 0) AS up_to_date_count,
+            COALESCE(MAX(na.new_count), 0) AS new_members
+        FROM collective c
+        LEFT JOIN member_paid mp ON mp.current_collective_id = c.id_collective
+        LEFT JOIN total_fees_per_collective tf ON tf.id_collective = c.id_collective
+        LEFT JOIN new_adh na ON na.current_collective_id = c.id_collective
+        GROUP BY c.id_collective, c.unique_number, c.unique_name
+    """;
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(collSql);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                collectivities.add(new CollInfo(
-                        rs.getString("id_collective"),
-                        rs.getString("unique_number"),
-                        rs.getString("unique_name")
-                ));
-            }
-        }
-
-        for (CollInfo coll : collectivities) {
-            List<Member> activeMembers = getActiveMembers(coll.id);
-            int totalActive = activeMembers.size();
-
-            List<FeeInfo> activeFees = new ArrayList<>();
-            String feeSql = "SELECT id_membership_fee, amount FROM membership_fee WHERE id_collective = ? AND status = 'ACTIVE' AND eligible_from <= ?";
-            try (Connection conn = DatabaseConfig.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(feeSql)) {
-                stmt.setString(1, coll.id);
-                stmt.setDate(2, Date.valueOf(to));
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        activeFees.add(new FeeInfo(rs.getString("id_membership_fee"), rs.getDouble("amount")));
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setDate(1, Date.valueOf(to));
+            stmt.setDate(2, Date.valueOf(from));
+            stmt.setDate(3, Date.valueOf(to));
+            stmt.setDate(4, Date.valueOf(from));
+            stmt.setDate(5, Date.valueOf(to));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int totalActive = rs.getInt("total_active");
+                    int upToDate = rs.getInt("up_to_date_count");
+                    double percentage = totalActive > 0 ? (double) upToDate / totalActive * 100.0 : 0.0;
+                    int newMembers = rs.getInt("new_members");
+                    String numberStr = rs.getString("unique_number");
+                    int number = 0;
+                    if (numberStr != null && !numberStr.isBlank()) {
+                        try {
+                            number = Integer.parseInt(numberStr);
+                        } catch (NumberFormatException ignored) { }
                     }
+                    CollectivityInfo info = new CollectivityInfo(number, rs.getString("unique_name"));
+                    result.add(new CollectivityOverallStatistics(info, newMembers, percentage));
                 }
             }
-
-            int upToDateCount = 0;
-            if (totalActive > 0 && !activeFees.isEmpty()) {
-                for (Member member : activeMembers) {
-                    boolean allPaid = true;
-                    for (FeeInfo fee : activeFees) {
-                        String paySql = "SELECT COALESCE(SUM(amount),0) FROM member_payment WHERE id_member = ? AND id_membership_fee = ? AND creation_date BETWEEN ? AND ?";
-                        double paid = 0.0;
-                        try (Connection conn = DatabaseConfig.getConnection();
-                             PreparedStatement stmt = conn.prepareStatement(paySql)) {
-                            stmt.setString(1, member.getId());
-                            stmt.setString(2, fee.id);
-                            stmt.setDate(3, Date.valueOf(from));
-                            stmt.setDate(4, Date.valueOf(to));
-                            try (ResultSet rs = stmt.executeQuery()) {
-                                if (rs.next()) paid = rs.getDouble(1);
-                            }
-                        }
-                        if (paid < fee.amount) { allPaid = false; break; }
-                    }
-                    if (allPaid) upToDateCount++;
-                }
-            }
-
-            double percentage = totalActive > 0 ? (double) upToDateCount / totalActive * 100.0 : 0.0;
-
-            long newAdh = 0;
-            String adhSql = "SELECT COUNT(*) FROM member WHERE current_collective_id = ? AND adhesion_date BETWEEN ? AND ?";
-            try (Connection conn = DatabaseConfig.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(adhSql)) {
-                stmt.setString(1, coll.id);
-                stmt.setDate(2, Date.valueOf(from));
-                stmt.setDate(3, Date.valueOf(to));
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) newAdh = rs.getLong(1);
-                }
-            }
-
-            CollectivityInfo info = new CollectivityInfo(
-                    Integer.parseInt(coll.number != null ? coll.number : "0"),
-                    coll.name
-            );
-            result.add(new CollectivityOverallStatistics(info, (int) newAdh, percentage));
         }
         return result;
     }
@@ -657,6 +634,24 @@ public class CollectiveRepository {
         } catch (SQLException e) {
             System.err.println("Connection failed: " + e.getMessage());
             return false;
+        }
+    }
+
+    private static class FeeInfo {
+        String id;
+        double amount;
+        FeeInfo(String id, double amount) {
+            this.id = id;
+            this.amount = amount;
+        }
+    }
+
+    private static class CollInfo {
+        String id, number, name;
+        CollInfo(String id, String number, String name) {
+            this.id = id;
+            this.number = number;
+            this.name = name;
         }
     }
 
