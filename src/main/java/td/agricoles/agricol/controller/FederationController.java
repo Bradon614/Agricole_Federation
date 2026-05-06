@@ -3,6 +3,7 @@ package td.agricoles.agricol.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import td.agricoles.agricol.Services.ActivityService;
 import td.agricoles.agricol.dto.request.*;
 import td.agricoles.agricol.dto.response.*;
 import td.agricoles.agricol.Services.CollectiveService;
@@ -21,11 +22,17 @@ public class FederationController {
 
     private final CollectiveService collectiveService;
     private final MemberService memberService;
+    private final ActivityService activityService;   // nouveau service
 
-    public FederationController(CollectiveService collectiveService, MemberService memberService) {
+    public FederationController(CollectiveService collectiveService,
+                                MemberService memberService,
+                                ActivityService activityService) {
         this.collectiveService = collectiveService;
         this.memberService = memberService;
+        this.activityService = activityService;
     }
+
+
 
     @PostMapping("/collectivities")
     public ResponseEntity<?> createCollectivities(@RequestBody List<CreateCollectivity> collectivities) {
@@ -70,7 +77,6 @@ public class FederationController {
             return new ResponseEntity<>("Internal server error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
 
     @GetMapping("/collectivities/{id}/membershipFees")
     public ResponseEntity<?> getMembershipFees(@PathVariable String id) {
@@ -132,7 +138,6 @@ public class FederationController {
     public ResponseEntity<?> createPayments(@PathVariable String id,
                                             @RequestBody List<CreateMemberPayment> payments) {
         try {
-
             if (MemberRepository.findById(id) == null) {
                 throw new NotFoundException("Member not found");
             }
@@ -170,6 +175,7 @@ public class FederationController {
         }
     }
 
+
     @GetMapping("/collectivities/{id}/statistics")
     public ResponseEntity<?> getCollectivityLocalStatistics(@PathVariable String id,
                                                             @RequestParam LocalDate from,
@@ -200,6 +206,60 @@ public class FederationController {
             return ResponseEntity.ok(stats);
         } catch (BadRequestException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+
+    @PostMapping("/collectivities/{id}/activities")
+    public ResponseEntity<?> createActivities(@PathVariable String id,
+                                              @RequestBody List<CreateActivityRequest> activities) {
+        try {
+            List<ActivityResponse> created = activityService.createActivities(id, activities);
+            return new ResponseEntity<>(created, HttpStatus.CREATED);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/collectivities/{id}/activities")
+    public ResponseEntity<?> getActivities(@PathVariable String id) {
+        try {
+            List<ActivityResponse> activities = activityService.getActivities(id);
+            return ResponseEntity.ok(activities);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/collectivities/{id}/activities/{activityId}/attendance")
+    public ResponseEntity<?> recordAttendance(@PathVariable String id,
+                                              @PathVariable String activityId,
+                                              @RequestBody List<AttendanceEntryRequest> entries) {
+        try {
+            List<AttendanceResponse> result = activityService.recordAttendance(activityId, entries);
+            return new ResponseEntity<>(result, HttpStatus.CREATED);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/collectivities/{id}/activities/{activityId}/attendance")
+    public ResponseEntity<?> getAttendance(@PathVariable String id,
+                                           @PathVariable String activityId) {
+        try {
+            List<AttendanceResponse> result = activityService.getAttendance(activityId);
+            return ResponseEntity.ok(result);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
         }
