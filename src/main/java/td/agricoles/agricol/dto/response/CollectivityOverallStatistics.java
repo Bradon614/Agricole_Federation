@@ -11,4 +11,5 @@ public class CollectivityOverallStatistics {
     private CollectivityInfo collectivityInformation;
     private int newMembersNumber;
     private double overallMemberCurrentDuePercentage;
+    private double overallAttendanceRate;
 }

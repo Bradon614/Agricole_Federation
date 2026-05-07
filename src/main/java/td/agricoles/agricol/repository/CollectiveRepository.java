@@ -499,65 +499,76 @@ public class CollectiveRepository {
 
     public List<CollectivityLocalStatistics> getLocalStatistics(String collectiveId, LocalDate from, LocalDate to) throws SQLException {
         List<CollectivityLocalStatistics> result = new ArrayList<>();
-
-        List<Member> members = getActiveMembers(collectiveId);
-
-        List<FeeInfo> activeFees = new ArrayList<>();
-        String feeSql = "SELECT id_membership_fee, amount FROM membership_fee WHERE id_collective = ? AND status = 'ACTIVE' AND eligible_from <= ?";
+        String sql = """
+        WITH total_fees AS (
+            SELECT COALESCE(SUM(amount), 0) AS total_fees
+            FROM membership_fee
+            WHERE id_collective = ? AND status = 'ACTIVE' AND eligible_from <= ?
+        ),
+        member_payments AS (
+            SELECT id_member, COALESCE(SUM(amount), 0) AS total_paid
+            FROM member_payment
+            WHERE creation_date BETWEEN ? AND ?
+            GROUP BY id_member
+        ),
+        total_activities AS (
+            SELECT COUNT(*) AS total_act
+            FROM activity
+            WHERE id_collective = ? AND scheduled_date BETWEEN ? AND ?
+        ),
+        present_counts AS (
+            SELECT a.id_member, COUNT(*) AS present_count
+            FROM attendance a
+            JOIN activity ac ON a.id_activity = ac.id_activity
+            WHERE ac.id_collective = ? AND ac.scheduled_date BETWEEN ? AND ?
+              AND a.status = 'PRESENT'
+            GROUP BY a.id_member
+        )
+        SELECT
+            m.id_member,
+            m.first_names,
+            m.last_name,
+            m.email,
+            m.occupation,
+            COALESCE(mp.total_paid, 0) AS earned_amount,
+            GREATEST((SELECT total_fees FROM total_fees) - COALESCE(mp.total_paid, 0), 0) AS unpaid_amount,
+            CASE
+                WHEN (SELECT total_act FROM total_activities) = 0 THEN 0.0
+                ELSE COALESCE(pc.present_count, 0) * 100.0 / (SELECT total_act FROM total_activities)
+            END AS attendance_rate
+        FROM member m
+        LEFT JOIN member_payments mp ON mp.id_member = m.id_member
+        LEFT JOIN present_counts pc ON pc.id_member = m.id_member
+        WHERE m.current_collective_id = ? AND m.status = 'active'
+    """;
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(feeSql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, collectiveId);
             stmt.setDate(2, Date.valueOf(to));
+            stmt.setDate(3, Date.valueOf(from));
+            stmt.setDate(4, Date.valueOf(to));
+            stmt.setString(5, collectiveId);
+            stmt.setDate(6, Date.valueOf(from));
+            stmt.setDate(7, Date.valueOf(to));
+            stmt.setString(8, collectiveId);
+            stmt.setDate(9, Date.valueOf(from));
+            stmt.setDate(10, Date.valueOf(to));
+            stmt.setString(11, collectiveId);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    activeFees.add(new FeeInfo(rs.getString("id_membership_fee"), rs.getDouble("amount")));
+                    MemberDescription desc = new MemberDescription(
+                            rs.getString("id_member"),
+                            rs.getString("first_names"),
+                            rs.getString("last_name"),
+                            rs.getString("email"),
+                            rs.getString("occupation")
+                    );
+                    double earned = rs.getDouble("earned_amount");
+                    double unpaid = rs.getDouble("unpaid_amount");
+                    double attRate = rs.getDouble("attendance_rate");
+                    result.add(new CollectivityLocalStatistics(desc, earned, unpaid, attRate));
                 }
             }
-        }
-
-        for (Member member : members) {
-            double earnedAmount = 0.0;
-            String earnedSql = "SELECT COALESCE(SUM(amount),0) FROM member_payment WHERE id_member = ? AND creation_date BETWEEN ? AND ?";
-            try (Connection conn = DatabaseConfig.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(earnedSql)) {
-                stmt.setString(1, member.getId());
-                stmt.setDate(2, Date.valueOf(from));
-                stmt.setDate(3, Date.valueOf(to));
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        earnedAmount = rs.getDouble(1);
-                    }
-                }
-            }
-
-            double unpaidAmount = 0.0;
-            for (FeeInfo fee : activeFees) {
-                String paidSql = "SELECT COALESCE(SUM(amount),0) FROM member_payment WHERE id_member = ? AND id_membership_fee = ? AND creation_date BETWEEN ? AND ?";
-                double paidForFee = 0.0;
-                try (Connection conn = DatabaseConfig.getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(paidSql)) {
-                    stmt.setString(1, member.getId());
-                    stmt.setString(2, fee.id);
-                    stmt.setDate(3, Date.valueOf(from));
-                    stmt.setDate(4, Date.valueOf(to));
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            paidForFee = rs.getDouble(1);
-                        }
-                    }
-                }
-                unpaidAmount += Math.max(0, fee.amount - paidForFee);
-            }
-
-
-            MemberDescription desc = new MemberDescription(
-                    member.getId(),
-                    member.getFirstName(),
-                    member.getLastName(),
-                    member.getEmail(),
-                    member.getOccupation() != null ? member.getOccupation().name() : null
-            );
-            result.add(new CollectivityLocalStatistics(desc, earnedAmount, unpaidAmount));
         }
         return result;
     }
@@ -584,6 +595,30 @@ public class CollectiveRepository {
             FROM member
             WHERE adhesion_date BETWEEN ? AND ?
             GROUP BY current_collective_id
+        ),
+        total_activities_per_collective AS (
+            SELECT id_collective, COUNT(*) AS total_act
+            FROM activity
+            WHERE scheduled_date BETWEEN ? AND ?
+            GROUP BY id_collective
+        ),
+        present_counts AS (
+            SELECT a.id_member, ac.id_collective, COUNT(*) AS present_count
+            FROM attendance a
+            JOIN activity ac ON a.id_activity = ac.id_activity
+            WHERE ac.scheduled_date BETWEEN ? AND ? AND a.status = 'PRESENT'
+            GROUP BY a.id_member, ac.id_collective
+        ),
+        member_attendance_rate AS (
+            SELECT m.id_member, m.current_collective_id,
+                CASE
+                    WHEN ta.total_act = 0 THEN 0.0
+                    ELSE COALESCE(pc.present_count, 0) * 100.0 / ta.total_act
+                END AS rate
+            FROM member m
+            LEFT JOIN total_activities_per_collective ta ON ta.id_collective = m.current_collective_id
+            LEFT JOIN present_counts pc ON pc.id_member = m.id_member AND pc.id_collective = m.current_collective_id
+            WHERE m.status = 'active'
         )
         SELECT
             c.id_collective,
@@ -593,11 +628,13 @@ public class CollectiveRepository {
             COALESCE(SUM(
                 CASE WHEN tf.total_fees IS NOT NULL AND mp.total_paid >= tf.total_fees THEN 1 ELSE 0 END
             ), 0) AS up_to_date_count,
-            COALESCE(MAX(na.new_count), 0) AS new_members
+            COALESCE(MAX(na.new_count), 0) AS new_members,
+            COALESCE(AVG(mar.rate), 0) AS overall_att_rate
         FROM collective c
         LEFT JOIN member_paid mp ON mp.current_collective_id = c.id_collective
         LEFT JOIN total_fees_per_collective tf ON tf.id_collective = c.id_collective
         LEFT JOIN new_adh na ON na.current_collective_id = c.id_collective
+        LEFT JOIN member_attendance_rate mar ON mar.current_collective_id = c.id_collective
         GROUP BY c.id_collective, c.unique_number, c.unique_name
     """;
         try (Connection conn = DatabaseConfig.getConnection();
@@ -607,12 +644,17 @@ public class CollectiveRepository {
             stmt.setDate(3, Date.valueOf(to));
             stmt.setDate(4, Date.valueOf(from));
             stmt.setDate(5, Date.valueOf(to));
+            stmt.setDate(6, Date.valueOf(from));
+            stmt.setDate(7, Date.valueOf(to));
+            stmt.setDate(8, Date.valueOf(from));
+            stmt.setDate(9, Date.valueOf(to));
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     int totalActive = rs.getInt("total_active");
                     int upToDate = rs.getInt("up_to_date_count");
                     double percentage = totalActive > 0 ? (double) upToDate / totalActive * 100.0 : 0.0;
                     int newMembers = rs.getInt("new_members");
+                    double overallAtt = rs.getDouble("overall_att_rate");
                     String numberStr = rs.getString("unique_number");
                     int number = 0;
                     if (numberStr != null && !numberStr.isBlank()) {
@@ -621,7 +663,7 @@ public class CollectiveRepository {
                         } catch (NumberFormatException ignored) { }
                     }
                     CollectivityInfo info = new CollectivityInfo(number, rs.getString("unique_name"));
-                    result.add(new CollectivityOverallStatistics(info, newMembers, percentage));
+                    result.add(new CollectivityOverallStatistics(info, newMembers, percentage, overallAtt));
                 }
             }
         }
