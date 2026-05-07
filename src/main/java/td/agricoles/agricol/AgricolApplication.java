@@ -3,9 +3,11 @@ package td.agricoles.agricol;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import td.agricoles.agricol.Services.ActivityService;
 import td.agricoles.agricol.Services.CollectiveService;
 import td.agricoles.agricol.Services.MemberService;
 import td.agricoles.agricol.controller.FederationController;
+import td.agricoles.agricol.repository.ActivityRepository;
 import td.agricoles.agricol.repository.CollectiveRepository;
 import td.agricoles.agricol.repository.MemberRepository;
 
@@ -28,6 +30,11 @@ public class AgricolApplication {
     }
 
     @Bean
+    public ActivityRepository activityRepository() {
+        return new ActivityRepository();
+    }
+
+    @Bean
     public CollectiveService collectiveService() {
         return new CollectiveService(collectiveRepository(), memberRepository());
     }
@@ -38,8 +45,12 @@ public class AgricolApplication {
     }
 
     @Bean
-    public FederationController federationController() {
-        return new FederationController(collectiveService(), memberService());
+    public ActivityService activityService() {
+        return new ActivityService(activityRepository(), collectiveRepository());
     }
 
+    @Bean
+    public FederationController federationController() {
+        return new FederationController(collectiveService(), memberService(), activityService());
+    }
 }
